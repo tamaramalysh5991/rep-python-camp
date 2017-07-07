@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-"""
-TODO:
-    create GREP-like CLI tool using python’s generators that takes PATTERN as
+""" Create GREP-like CLI tool using python’s generators that takes PATTERN as
     param and match incoming data from stdin or from unlimited set of
     files passaed as params as well. Unix pipes should be supported as well.
 
@@ -19,7 +17,7 @@ TODO:
 
     for implementing CLI functionality you can use ANY pip packages.
 """
-from argparse import ArgumentParser
+from argparse import ArgumentParser, FileType
 from sys import stdin
 
 
@@ -84,14 +82,15 @@ def grep():
 
     if not stdin.isatty():
         """Detect if someone is piping data into program,
-           or running it interactively.
+        or running it interactively
         """
         args = parser.parse_args()
         total, find, lines = next(standard_input(args.pattern, stdin))
         return return_print % (total, find, lines)
     else:
         """Return count of pattern in lines from files."""
-        parser.add_argument('files', nargs='+', help='Files to be searched')
+        parser.add_argument('files', nargs='+',
+                            help='Files to be searched', type=FileType())
         args = parser.parse_args()
         total, find, lines = next(input_file(args.pattern, args.files))
         return return_print % (total, find, lines)

@@ -1,19 +1,20 @@
-"""
-TODO:
-    make yrange implementation (using class/iterator protocol)
+""" yrange implementation (using yield)
     that take any param (power of number),
-    plus the iterator should NEVER END,
+    the iterator should NEVER END,
     instead of raising StopIteration -
     the behavior should be to continue from starting element, i.e.
     1,2,3,4,1,2,3,4,1,2,3,4 etc.
 
-    make the same solution using generator function.
-    No use of itertools (Cycle) is allowed here.
-
-    The class use iterator protocol.
-
-    Example:
-        t = yrange_cycle(5)
+An infinite number generator, from 0 to the maximum limit put in the function
+Args:
+    upper_limit (int):  The upper limit of the range to generate.
+Yields:
+    The next number in the range of 0 to integers + 1.
+    When the maximum value is reached, the cycle is repeated from 0.
+Raises:
+     AttributeError.
+Example:
+        t = cycle_number(5)
         next(t)
         0
         next(t)
@@ -29,40 +30,16 @@ TODO:
 """
 
 
-class yrange_cycle:
-
-    """ Iterator protocol without StopIteration/
-        Args:
-            n (int): parametr (power of number)
-            i (int): counter
-    """
-    def __init__(self, n):
-        """ Initilisation of class.
-            __init__ get n(power of number).
-            Variable n is checked
-        """
-        if type(n) != int or n is None:
-            raise Exception("It's not a number!")
-        self.i = 0
-        self.n = n
-
-    def __iter__(self):
-        """ __iter__ need for iterator protocol.
-            Thanks to i = 0 list is not empty(list(n) != [])
-        """
-        self.i = 0
-        return self
-
-    def __next__(self):
-        """ Realization next"""
-        if self.i < self.n:
-            i = self.i
-            self.i += 1
-            return i
-        else:
-            """ Zero the counter instead of StopIteration"""
-            self.i = 0
-            if self.i < self.n:
-                i = self.i
-                self.i += 1
-                return i
+def cycle_number(upper_limit):
+    if not isinstance(upper_limit, int):
+        raise AttributeError('It is not a number!')
+    if upper_limit < 0:
+        for element in range(0, upper_limit, -1):
+            yield element
+    elif upper_limit == 0:
+        while True:
+            yield 0
+    else:
+        while True:
+            for element in range(0, upper_limit):
+                yield element
