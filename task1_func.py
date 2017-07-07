@@ -8,7 +8,7 @@ TODO:
 
 from collections import Iterable
 
-
+# TODO: Don't make grammar errors when you name the attributes, arguments
 def reverse_iter(iterable_varibale):
     """Generator return reverse iterable
         Args:
@@ -26,11 +26,14 @@ def reverse_iter(iterable_varibale):
             1
             StopIteration
     """
+
+    # TODO: use len(iterable) for such comparisons
     if iterable_varibale == []:
         raise ValueError('Iterable! is empty')
     elif isinstance(iterable_varibale, Iterable) is False:
         raise ValueError('It is not iterable!')
 
+    # TODO: parenthesis are not needed here
     for i in (iterable_varibale)[::-1]:
             yield i
 
