@@ -1,6 +1,7 @@
 from task1_func import reverse_iter
 import unittest
 
+
 class Test_task1(unittest.TestCase):
 
     def setUp(self):
@@ -15,10 +16,11 @@ class Test_task1(unittest.TestCase):
             next(self.reverse_exp(2))
 
     def test_0(self):
-        s = reverse_iter([1,2,3])
+        s = reverse_iter([1, 2, 3])
         self.assertEqual(next(s), 3)
         self.assertEqual(next(s), 2)
         self.assertEqual(next(s), 1)
+
 
 if __name__ == '__main__':
     unittest.main()
