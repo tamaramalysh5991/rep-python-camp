@@ -5,6 +5,7 @@ import click
 
 
 def search_in_files(pattern, files):
+<<<<<<< HEAD
     """Funcrion return search results from files input.
     Args:
         pattern(string) - Word used for search.
@@ -14,6 +15,8 @@ def search_in_files(pattern, files):
         int: all_processed - total processed rows
         list: find_rows - rows with pattern
     """
+=======
+>>>>>>> 38742948e525dbfdb3ad1f9de274899646fd5b8a
     encounters = 0
     all_processed = 0
     find_rows = []
@@ -28,6 +31,7 @@ def search_in_files(pattern, files):
 
 
 def search_lines(pattern, lines):
+<<<<<<< HEAD
     """Funcrion return search results from files input.
     Args:
         pattern(string) - Word used for search.
@@ -36,6 +40,9 @@ def search_lines(pattern, lines):
         int: line_count - count of occurrence.
         int: all_processed - total processed rows
         list: find_rows - rows with pattern"""
+=======
+
+>>>>>>> 38742948e525dbfdb3ad1f9de274899646fd5b8a
     lines = iter(lines)
     encounters = 0
     all_processed = 0

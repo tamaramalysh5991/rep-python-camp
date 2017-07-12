@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import unittest
 
 from task1_func import reverse_iter
@@ -7,6 +8,12 @@ class Test_task1(unittest.TestCase):
     '''Unittest for task1.
     Coverage 100%
     '''
+=======
+from task1_func import reverse_iter
+import unittest
+
+
+class Test_task1(unittest.TestCase):
 
     def setUp(self):
         self.reverse_exp = reverse_iter
@@ -24,6 +31,7 @@ class Test_task1(unittest.TestCase):
 
     def test_0(self):
         '''Test checks how code works with iterable'''
+
         s = reverse_iter([1, 2, 3])
         self.assertEqual(next(s), 3)
         self.assertEqual(next(s), 2)
