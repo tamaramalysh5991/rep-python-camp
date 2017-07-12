@@ -1,5 +1,6 @@
 import sys
 
+
 def grep(pattern):
     print("Searching for", pattern)
     while True:

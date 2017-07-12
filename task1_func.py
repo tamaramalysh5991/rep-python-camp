@@ -26,4 +26,3 @@ def reverse_iter(iterable):
 
     for i in iterable[::-1]:
             yield i
-

@@ -1,5 +1,6 @@
 import types
 
+
 class IntegerGenerator:
     """ class just return increment integer IterIncrement.index"""
 
@@ -47,4 +48,3 @@ class IntegerGenerator:
 
     def __next__(self):
         return next(self.integer())
-

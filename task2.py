@@ -1,28 +1,11 @@
 #!/usr/bin/env python
-""" Create GREP-like CLI tool using python’s generators that takes PATTERN as
-    param and match incoming data from stdin or from unlimited set of
-    files passaed as params as well. Unix pipes should be supported as well.
-
-    Examples of use case that should work:
-            ./grep.py PATTERN < test.py (stdin)
-            ./grep.py PATTERN file1 file2 etc
-            cat file1 | ./grep.py PATTERN
-            find . -iname '*.py' | ./grep.py PATTERN
-            ./grep.py -h -> should print small help
-
-            the CLI tool should output matched text
-            the CLI tool should output matched stats like Matched 3 out of 5000
-            the CLI tool should output help
-            the PATTERN param is just a text (not a regexp)
-
-    for implementing CLI functionality you can use ANY pip packages.
-"""
-from argparse import ArgumentParser, FileType
 from sys import stdin
 
+import click
 
-def input_file(pattern, files):
-    """Function return search results from files input.
+
+def search_in_files(pattern, files):
+    """Funcrion return search results from files input.
     Args:
         pattern(string) - Word used for search.
         files (file)- List of received files.
@@ -30,22 +13,22 @@ def input_file(pattern, files):
         list: rows with an occurrence pattern.
     Yields:
         int: line_count - count of occurrence.
-        int: total_count - total processed rows
+        int: all_processed - total processed rows
     """
-    line_count = 0
-    total_count = 0
-    line_all = []
+    encounters = 0
+    all_processed = 0
+    find_rows = []
     for f in files:
-        for line in open(f):
+        for line in f:
             if pattern in line:
-                line_count += 1
-                line_all.append(line)
-            total_count += 1
-    line_all = ('\n'.join(line_all))
-    yield (line_count, total_count, line_all)
+                encounters += 1
+                find_rows.append(line)
+            all_processed += 1
+    find_rows = ('\n'.join(find_rows))
+    yield (encounters, all_processed, find_rows)
 
 
-def standard_input(pattern, lines):
+def search_lines(pattern, lines):
     """Funcrion return search results from standard input.
     Args:
         pattern(string) - Word used for search.
@@ -54,47 +37,59 @@ def standard_input(pattern, lines):
         list: rows with an occurrence pattern.
     Yields:
         int: line_count - count of occurrence.
-        int: total_count - total processed rows
+        int: all_processed - total processed rows
     """
     lines = iter(lines)
-    line_count = 0
-    total_count = 0
-    line_all = []
+    encounters = 0
+    all_processed = 0
+    find_rows = []
     for line in lines:
         if pattern in line:
-            line_all.append(line)
-            line_count += 1
-        total_count += 1
-    line_all = ('\n'.join(line_all))
-    yield (line_count, total_count, line_all)
+            for in_line in line.split():
+                if pattern in in_line:
+                    encounters += 1
+            find_rows.append(line)
+        all_processed += 1
+    find_rows = ('\n'.join(find_rows))
+    yield (encounters, all_processed, find_rows)
 
 
-def grep():
+CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
-    parser = ArgumentParser(prog='grep.py',
-                            usage='''
-                            %(prog)s PATTERN file1 file2 or < test.py (stdin)
-                            cat file1 | %(prog)s PATTERN
-                            find . -iname '*.py' | %(prog)s PATTERN''')
+@click.command(context_settings=CONTEXT_SETTINGS)
+def cli():
+    ''' task2_click.py is programm for find occurrence PATTERN in files\n
+        ./task2_click.py  PATTERN file1 file2 or < test.py (stdin)\n
+        \b
+        cat file1 | ./task2_click.py PATTERN\n
+        find . -iname '*.py' | ./task2_click.py  PATTERN
+    '''
+    pass
 
-    parser.add_argument('pattern', help='Pattern is searched in files')
-    return_print = 'Total: %d event in %d rows.\n\n%s'
+@click.command()
+@click.argument('pattern', type=str)
+@click.argument('files', nargs=-1, type=click.File('r'))
+def grep_file(pattern, files):
+    """
+    """
+    result = 'Find lines: \n%s\n %d occurrences in %d rows.\n'
+    encounters, all_processed, find_rows = next((search_in_files(pattern, files)))
+    click.secho(result % (find_rows, encounters, all_processed), fg='blue')
 
+@click.command()
+@click.argument('pattern', nargs=1, type=str)
+def grep_input(pattern):
+    """
+    """
+    result = 'Find lines: \n%s\n %d occurrences in %d rows.\n'
+    input_stream = click.get_text_stream('stdin')
+    encounters, all_processed, find_rows = next(search_lines(pattern, input_stream))
+    click.secho(result % (find_rows, encounters, all_processed), fg='blue')
+
+
+
+if __name__ == '__main__': # pragma: no cover
     if not stdin.isatty():
-        """Detect if someone is piping data into program,
-        or running it interactively
-        """
-        args = parser.parse_args()
-        total, find, lines = next(standard_input(args.pattern, stdin))
-        return return_print % (total, find, lines)
+        grep_input()
     else:
-        """Return count of pattern in lines from files."""
-        parser.add_argument('files', nargs='+',
-                            help='Files to be searched', type=FileType())
-        args = parser.parse_args()
-        total, find, lines = next(input_file(args.pattern, args.files))
-        return return_print % (total, find, lines)
-
-
-if __name__ == '__main__':
-    print(grep())
+        grep_file()
