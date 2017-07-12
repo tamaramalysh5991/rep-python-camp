@@ -5,16 +5,6 @@ import click
 
 
 def search_in_files(pattern, files):
-    """Funcrion return search results from files input.
-    Args:
-        pattern(string) - Word used for search.
-        files (file)- List of received files.
-    Return:
-        list: rows with an occurrence pattern.
-    Yields:
-        int: line_count - count of occurrence.
-        int: all_processed - total processed rows
-    """
     encounters = 0
     all_processed = 0
     find_rows = []
@@ -29,16 +19,7 @@ def search_in_files(pattern, files):
 
 
 def search_lines(pattern, lines):
-    """Funcrion return search results from standard input.
-    Args:
-        pattern(string) - Word used for search.
-        lines(list)- Rows.
-    Return:
-        list: rows with an occurrence pattern.
-    Yields:
-        int: line_count - count of occurrence.
-        int: all_processed - total processed rows
-    """
+
     lines = iter(lines)
     encounters = 0
     all_processed = 0
