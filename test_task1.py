@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import unittest
 
 from task1_func import reverse_iter
@@ -7,14 +8,24 @@ class Test_task1(unittest.TestCase):
     '''Unittest for task1.
     Coverage 100%
     '''
+=======
+from task1_func import reverse_iter
+import unittest
+
+
+class Test_task1(unittest.TestCase):
+>>>>>>> master
 
     def setUp(self):
         self.reverse_exp = reverse_iter
 
     def test_exception(self):
+<<<<<<< HEAD
         '''Test checks exceptions ValueError
         and AttributeError
         '''
+=======
+>>>>>>> master
         with self.assertRaises(ValueError):
             next(self.reverse_exp([]))
         with self.assertRaises(ValueError):
@@ -23,7 +34,10 @@ class Test_task1(unittest.TestCase):
             next(self.reverse_exp(2))
 
     def test_0(self):
+<<<<<<< HEAD
         '''Test checks how code works with iterable'''
+=======
+>>>>>>> master
         s = reverse_iter([1, 2, 3])
         self.assertEqual(next(s), 3)
         self.assertEqual(next(s), 2)

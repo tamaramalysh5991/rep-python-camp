@@ -1,12 +1,15 @@
+"""
+TODO:
+    it = reverse_iter([1, 2, 3, 4])
+    (so display items in reverse order)
+
+    This realisation use yield and slicing.
+"""
+
 from collections import Iterable
 
-<<<<<<< HEAD
-
-def reverse_iter(iterable):
-=======
 # TODO: Don't make grammar errors when you name the attributes, arguments
 def reverse_iter(iterable_varibale):
->>>>>>> master
     """Generator return reverse iterable
         Args:
             iterable_varibale - object, implement the iterator protocol.
@@ -23,10 +26,6 @@ def reverse_iter(iterable_varibale):
             1
             StopIteration
     """
-<<<<<<< HEAD
-    if isinstance(iterable, Iterable) is False:
-        raise AttributeError('It is not iterable!')
-=======
 
     # TODO: use len(iterable) for such comparisons
     if iterable_varibale == []:
@@ -38,10 +37,12 @@ def reverse_iter(iterable_varibale):
     for i in (iterable_varibale)[::-1]:
             yield i
 
->>>>>>> master
 
-    if len(iterable) == 0:
-        raise ValueError('Iterable is empty')
 
-    for i in iterable[::-1]:
-            yield i
+"""First realisation
+    def rev_it(iterable):
+        n = len(iterable) -1
+        while n >= 0:
+            yield iterable[n]
+            n -=1
+"""
