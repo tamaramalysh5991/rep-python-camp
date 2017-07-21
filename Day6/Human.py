@@ -9,7 +9,7 @@ import names
 
 class Person(abc.ABC):
     """Base class of Family tree
-    Initializes a Person.
+    Initializes a Person.T
 
     Atributes:
         first_name (str) =  Human readable string describing first nameDenis.Ta
@@ -31,6 +31,7 @@ class Person(abc.ABC):
         self.fertility = random.random()
         self.spouse = None
         self.family = Family()
+        self.root_family = self.family
         # self.parent = parent
         # self.married - married
         #   self.created = created or datetime.now()=
@@ -47,6 +48,7 @@ class Family:
         self.sister = []
         self.brother = []
         self.children = []
+        self.parent = []
 
     """def add_sister_brother(self):
         for child in self.children:
@@ -58,6 +60,15 @@ class Family:
 
 class PersonMixin(object):
     """Class PersonMixin"""
+    @staticmethod
+    def gender_of_baby():
+        gender = ['f', 'm']
+        g = random.choice(gender)
+        return g
+
+    def fertility(self, person):
+        total_fertility = self.fertility + person.fertility - (self.fertility * person.fertility)
+        return total_fertility
 
     # @staticmethod
     def marriage(self, person):
@@ -84,39 +95,107 @@ class PersonMixin(object):
             f.mother = self
             f.father = person
 
+    @property
+    def mother(self):
+        mom = None
+        for parent in self.family.parent:
+            if isinstance(parent, Woman):
+                mom = parent
+        return mom
+
+    @property
+    def father(self):
+        father = None
+        for parent in self.family.parent:
+            if isinstance(parent, Man):
+                mom = parent
+        return father
+
+    @property
+    def grandmother(self):
+        grandma = []
+        for person in self.family.parent:
+            pass
+
+    @property
+    def husband(self):
+        if isinstance(self, Man):
+            raise Exception('Man don"t have a husband!')
+        return self.spouse.first_name
+
+    @property
+    def wife(self):
+        if isinstance(self, Woman):
+            raise Exception('Woman don"t have a wife!')
+        return self.spouse.first_name
+
+    @property
+    def children(self):
+        children = []
+        for child in self.family.children:
+            children.append(child.first_name)
+        return children
+
+    @property
+    def son(self):
+        son = []
+        for child in self.family.children:
+            if isinstance(child, Man):
+                son.append(child.first_name)
+        return son
+
+    @property
+    def daughter(self):
+        daughter = []
+        for child in self.family.children:
+            if isinstance(child, Woman):
+                daughter.append(child.first_name)
+        return daughter
+
     # @classmethod
     def sex(self, person):
         """New member of family"""
 
         if not (self.spouse == person and person.spouse == self):
             AttributeError('It not a spouse')
-        total_fertility = self.fertility + person.fertility - (self.fertility * person.fertility)
-        if total_fertility > 0.5:
+        # total_fertility = self.fertility + person.fertility - (self.fertility * person.fertility)
+        if PersonMixin.fertility(self, person) > 0.5:
             print('baby!')
-            gender = ['f', 'm']
-            g = random.choice(gender)
-            if g == 'f':
+            # gender = ['f', 'm']
+            # g = random.choice(gender)
+            if PersonMixin.gender_of_baby() == 'f':
                 name = names.get_first_name(gender='female')
-                baby = Woman(name, person.last_name, 2017, g)
+                baby = Woman(name, person.last_name, 2017, PersonMixin.gender_of_baby())
             else:
                 name = names.get_first_name(gender='male')
-                baby = Man(name, person.last_name, 2017, g)
-            baby.family = person.family
-            person.family.children.append(baby)
+                baby = Man(name, person.last_name, 2017, PersonMixin.gender_of_baby())
+
             if isinstance(person, Woman):
+                baby.family = person.family
                 baby.family.mother = person
                 baby.family.father = self
+                person.family.children.append(baby)
             else:
+                baby.family = self.family
                 baby.family.mother = self
                 baby.family.father = person
-            if len(person.family.children) != 0:
-                # person.family.add_sister_brother()
-                if isinstance(baby, Man):
-                    person.family.brother.append(baby)
-                else:
-                    person.family.sister.append(baby)
+                self.family.children.append(baby)
         else:
-                print('Ops!')
+                raise Exception('Small fertility')
+
+    def divorce(self, person):
+        if isinstance(self, Woman):
+            self.last_name = self.maiden_name
+        else:
+            person.last_name = person.maiden_name
+            self.family = self.root_family
+        person.propose = False
+        person.spouse = None
+        self.propose = False
+        self.spouse = None
+        person.family = person.root_family
+        self.status = None
+        person.status = None
 
 
 class Woman(Person, Family, PersonMixin):
