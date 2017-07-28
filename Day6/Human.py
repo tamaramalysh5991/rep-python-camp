@@ -3,6 +3,7 @@ import abc
 import random
 import names
 from collections import namedtuple
+from itertools import chain
 
 
 class Person(abc.ABC):
@@ -28,8 +29,9 @@ class Person(abc.ABC):
         self.birth = birth
         self.fertility = random.choice([True, False])
         self.spouse = None
-        self.family = family or Family()
-        self.root_family = self.family
+        self.family = family
+        self.root_family = family or Family()
+        self.list_family = []
 
 
 class PersonMixin(object):
@@ -38,66 +40,104 @@ class PersonMixin(object):
 
     This class contain virtual properties (Son, Daughter,
     Brother, Sister, Spouse, Wife, Husband, Grandfather,
-    Grandmother, GrandChildren, Uncle, Aunt).
+    Grandmother, GrandChildren, Uncle, Aunt and etc).
 
     Also PersonMixin contain method of marriage
     and method of divorce.
 
     """
     @property
+    def grandchildren(self):
+        """Return grandchildren of Person
+        Grandchildren are children of children of Person
+        """
+        grandchild = []
+        for child in self.children:
+            grandchild += child.children
+        return list(chain(grandchild))
+
+    @property
+    def cousin(self):
+        """This property return cousins
+        Cousins are children of aunt and uncle
+        """
+        aunt_children = []
+        uncle_children = []
+        for aunt in self.aunt:
+            aunt_children += aunt.children
+        for uncle in self.uncle:
+            uncle_children += uncle.children
+        #  total = list(chain(aunt_children, uncle_children))
+        return list(chain(aunt_children, uncle_children))
+
+    @property
+    def grandparents(self):
+        return list(chain(self.grandmother, self.grandfather))
+
+    @property
     def parents(self):
         """This property return parents of Person """
         return [self.mother, self.father]
+
+    @property
+    def great_grandmother(self):
+        """Property return great grandmothers
+        Grandmother is mother of grandmother
+        """
+        great_grandmother = []
+        for grand in self.grandparents:
+            great_grandmother.append(grand.mother)
+            return list(chain(great_grandmother))
 
     @property
     def aunt(self):
         """Property return list of aunts
         Aunt is sister of father or mother
         """
-        return [self.root_family.mother.sisters, self.root_family.father.sisters]
+        return list(chain(self.root_family.mother.sisters, self.root_family.father.sisters))
 
     @property
     def uncle(self):
         """Property return list of uncles
         Uncle is brother of mother or father
         """
-        return [self.root_family.mother.brothers, self.root_family.father.brothers]
+        return list(chain(self.root_family.mother.brothers, self.root_family.father.brothers))
 
     @property
     def brothers(self):
         """Property return list of brother of Person"""
-        return [male.first_name
+        return [male
                 for male in self.root_family.children
                 if isinstance(male, Man) and male != self]
 
     @property
     def sisters(self):
         """Property return list of sisters of Person"""
-        return [s.first_name
+        return [s
                 for s in self.root_family.children
                 if isinstance(s, Woman) and s != self]
 
     @property
     def grandmother(self):
         """This property returns list of grandmother for Person"""
-        return [self.mother.mother.first_name,
-                self.father.mother.first_name]
+        return list(chain([self.mother.mother,
+                self.father.mother]))
 
     @property
     def grandfather(self):
         """This property returns list of grandfather for Person"""
-        return [self.mother.father.first_name,
-                self.father.father.first_name]
+        return list(chain([self.mother.father,
+                self.father.father]))
 
     @property
     def mother(self):
         """This property returns mother for Person"""
-        return self.root_family.mother.first_name
+        return self.root_family.mother
 
     @property
     def father(self):
         """This property returns father for Person"""
-        return self.root_family.father.first_name
+        return self.root_family.father
 
     @property
     def husband(self):
@@ -108,7 +148,8 @@ class PersonMixin(object):
         """
         if isinstance(self, Man):
             raise Exception('Man don"t have a husband!')
-        return self.spouse.first_name
+        if not self.family.divorced:
+            return self.spouse
 
     @property
     def wife(self):
@@ -118,31 +159,40 @@ class PersonMixin(object):
             Only man can have a wife"""
         if isinstance(self, Woman):
             raise Exception('Woman don"t have a wife!')
-        return self.spouse.first_name
+        if not self.family.divorced:
+            return self.spouse.first_name
 
     @property
     def children(self):
+        children = []
+        for f in self.list_family:
+            children += f.children
+        return list(chain(children))
+
+        '''for f in self.list_family:
+            # return list(chain([child for child in f.children]))
+            for child in f.children:
+                children.append(child)
+        return children'''
+
+    @property
+    def children_in_family(self):
         """This method returns list of children for Person"""
         return [child for child in self.family.children]
 
     @property
     def son(self):
         """This method returns list of sons for Person"""
-        return [male.first_name
-                for male in self.family.children
+        return [male
+                for male in self.children
                 if isinstance(male, Man)]
 
     @property
     def daughter(self):
         """This method returns list of daughters for Person"""
-        return [female.first_name
-                for female in self.family.children
+        return [female
+                for female in self.children
                 if isinstance(female, Woman)]
-
-    '''def divorced(self):
-        """Function for divorce family"""
-        print('Divorce')
-        return self.divorced'''
 
     def marriage(self, person):
         """Marriage and create new Family.
@@ -166,17 +216,6 @@ class PersonMixin(object):
         person.spouse = self
         self.spouse = person
 
-        children_person = []
-        children_self = []
-
-        if person.family.divorced and (person.family.father == person
-                                       or person.family.mother == person):
-            children_person = person.family.children
-
-        if self.family.divorced and (self.family.father == self
-                                     or self.family.father):
-            children_self = self.family.children
-
         if isinstance(person, Woman):
             person.family = Family(self, person)
             person.maiden_name = person.last_name
@@ -188,10 +227,8 @@ class PersonMixin(object):
             self.last_name = person.last_name
             person.family = self.family
 
-        for child in children_self:
-            self.family.add(child)
-        for child in children_person:
-            self.family.add(child)
+        person.list_family.append(person.family)
+        self.list_family.append(self.family)
 
 
 class Family:
@@ -214,18 +251,22 @@ class Family:
         children (list) : contain children
     """
 
-    Father = namedtuple('Male', 'first_name, last_name')
-    Mother = namedtuple('Female', 'first_name, last_name')
+    # Father = namedtuple('Male', 'first_name, last_name')
+    # Mother = namedtuple('Female', 'first_name, last_name')
 
     def __init__(self, father=None, mother=None):
-        self.mother = mother or Family.Mother('Eve', 'Goddess',)
-        self.father = father or Family.Father('Adam', 'Goddess',)
+        self.mother = mother or Woman('Eve', 'Goddess', 0,
+                                      Family(father='Godness', mother='Godness'))
+        self.father = father or Man('Adam', 'Goddess', 0,
+                                    Family(father='Godness', mother='Godness'))
         self.children = []
-        self.divorced = False
+        self._divorced = False
 
     def __iadd__(self, child):
         """This method add child in Family"""
         self.children.append(child)
+
+    add = __iadd__
 
     def add_child(self, person):
         """This method add an already existing person in the Family"""
@@ -234,20 +275,24 @@ class Family:
         if not person.spouse:
             person.family = self
 
-    add = __iadd__
+    '''@property    
+    def divorce(self):
+        return self._divorced'''
 
-    # @divorced.setter
+    # @divorce.setter
     def divorce(self):
         """This method release a divorce.
         After divorce father and mother can marriage again.
         Status of divorce of family change on True.
 
         """
+        # if isinstance(value, bool):
+        # raise Exception('Its not exist')
         self.father.propose = False
         self.mother.propose = False
-        self.mother.spouse = None
-        self.father.spouse = None
-        self.divorced = True
+        # self.mother.spouse = None
+        # self.father.spouse = None
+        self._divorced = True
 
 
 class Woman(Person, Family, PersonMixin):
@@ -257,7 +302,6 @@ class Woman(Person, Family, PersonMixin):
     Attributes:
         spouse (Person): spouse of Woman
         propose (bool): label of betrothal
-        fiancee (bool):  label of betrothal
         maiden_name (str): param contain maiden name
     """
     # NAMES = names.get_first_name(gender='female')
@@ -273,12 +317,14 @@ class Woman(Person, Family, PersonMixin):
              'Whitney',
              'Sherry']
 
-    def __init__(self, first_name, last_name, birth, family=None):
-        super().__init__(first_name, last_name, birth, family)
+    #  def __init__(self, first_name, last_name, birth, family=None):
+    #  super().__init__(first_name, last_name, birth, family)
+
+    def __init__(self, *args, **kwargs):
+        super(Woman, self).__init__(*args, **kwargs)
         self.spouse = None
         self.maiden_name = None
         self.propose = False
-        self.fiancee = False
 
 
 class Man(Person, Family, PersonMixin):
@@ -289,7 +335,6 @@ class Man(Person, Family, PersonMixin):
     Attributes:
         spouse (Person): spouse of Man
         propose (bool): label of betrothal
-        fiance (bool):  label of betrothal
 
     """
     # NAMES = names.get_first_name(gender='male')
@@ -304,12 +349,10 @@ class Man(Person, Family, PersonMixin):
              'Andrew',
              'Christopher']
 
-    def __init__(self, first_name, last_name, birth,
-                 family=None):
-        super().__init__(first_name, last_name, birth, family)
+    def __init__(self, *args, **kwargs):
+        super(Man,self).__init__(*args, **kwargs)
         self.spouse = None
         self.propose = False
-        self.fiance = False
 
     def proposed(self, woman):
         """Function of betrothal
@@ -335,8 +378,7 @@ class Man(Person, Family, PersonMixin):
             print('She say Yes!')
             woman.propose = True
             self.propose = True
-            woman.fiancee = True
-            self.fiance = True
+
         else:
             print('She say No(')
 
@@ -361,31 +403,34 @@ def sex(man, woman):
     if not (man.spouse == woman and woman.spouse == man):
         AttributeError('It not a spouse')
 
-    if man.fertility or woman.fertility:
+    if True:  # man.fertility or woman.fertility:
         print('baby!')
         gender = random.choice([Man, Woman])
         name = random.choice(gender.NAMES)
         baby = gender(name, man.last_name, 2017)
         baby.root_family = woman.family
-        baby.family = woman.family
+        # baby.family = woman.family
         # woman.family.children.append(baby)
         woman.family.add(baby)
     else:
         raise Exception('Small fertility')
 
 Valya = Woman('Valentina', 'Brown', 1938)
-Leon = Man('Leon', 'Brown', 1938)
+Leon = Man('leon', 'Val', 1955)
 Gornostay = Family(Leon, Valya)
 Leon.family= Gornostay
 Valya.family = Gornostay
+Valya.list_family.append(Valya.family)
 
 Andrey = Man('Andrey', 'Malysh', 1968)
 Marina = Woman('Marina', 'Malysh', 1968)
 Malyshevy = Family(Andrey, Marina)
+
 Andrey.family = Malyshevy
 Marina.root_family = Gornostay
 Gornostay.children.append(Marina)
 Marina.family = Malyshevy
+Marina.list_family.append(Marina.family)
 
 Tamara = Woman('Toma', 'Malysheva', 1995)
 Tamara.family = Malyshevy
@@ -402,9 +447,15 @@ Sam = Woman('Sam', 'Snoy', 1955)
 Drogo = Man('Drogo', 'Khal', 1992)
 Leon.family.add_child(Sam)
 Leon.family.add_child(Drogo)
+Asha = Woman('Asha', 'n', 1995)
+Drogo.proposed(Asha)
+Drogo.marriage(Asha)
+sex(Drogo, Asha)
+Tamara.family.divorce()
 Andrey = Man('Andrey', 'Mensh', 1990)
 Andrey.proposed(Tamara)
 Andrey.marriage(Tamara)
+sex(Andrey, Tamara)
 
 
 # Tamara.mother.mother.first_name
