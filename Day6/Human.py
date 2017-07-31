@@ -1,8 +1,7 @@
 import abc
-# from datetime import  datetime, date, time
+import datetime
 import random
 import names
-from collections import namedtuple
 from itertools import chain
 
 
@@ -36,7 +35,7 @@ class Person(abc.ABC):
 
 class PersonMixin(object):
     """Class PersonMixin
-    All instances of Person can use this methods.
+    All instances of Person can use this method
 
     This class contain virtual properties (Son, Daughter,
     Brother, Sister, Spouse, Wife, Husband, Grandfather,
@@ -47,31 +46,37 @@ class PersonMixin(object):
 
     """
     @property
+    def age(self):
+        age = datetime.date(self.birth, 1, 1)
+        return datetime.date.today().year - age.year
+
+    @property
+    def great_grandchildren(self):
+        """This property return great_grandchildren """
+        great_child = list(chain([child.children for child in self.grandchildren]))
+        return list(chain.from_iterable(great_child))
+
+    @property
     def grandchildren(self):
         """Return grandchildren of Person
         Grandchildren are children of children of Person
         """
-        grandchild = []
-        for child in self.children:
-            grandchild += child.children
-        return list(chain(grandchild))
+        # grandchild = [child.children for child in self.children]
+        return list(chain.from_iterable([child.children for child in self.children]))
 
     @property
     def cousin(self):
         """This property return cousins
         Cousins are children of aunt and uncle
         """
-        aunt_children = []
-        uncle_children = []
-        for aunt in self.aunt:
-            aunt_children += aunt.children
-        for uncle in self.uncle:
-            uncle_children += uncle.children
+        aunt_children = list(chain.from_iterable([aunt.children for aunt in self.aunt]))
+        uncle_children = list(chain.from_iterable([uncle.children for uncle in self.uncle]))
         #  total = list(chain(aunt_children, uncle_children))
         return list(chain(aunt_children, uncle_children))
 
     @property
     def grandparents(self):
+        """This property return list of grandparents"""
         return list(chain(self.grandmother, self.grandfather))
 
     @property
@@ -84,24 +89,24 @@ class PersonMixin(object):
         """Property return great grandmothers
         Grandmother is mother of grandmother
         """
-        great_grandmother = []
-        for grand in self.grandparents:
-            great_grandmother.append(grand.mother)
-            return list(chain(great_grandmother))
+        great_grandmother = [grand.mother for grand in self.grandparents]
+        return list(chain(great_grandmother))
 
     @property
     def aunt(self):
         """Property return list of aunts
         Aunt is sister of father or mother
         """
-        return list(chain(self.root_family.mother.sisters, self.root_family.father.sisters))
+        return list(chain(self.root_family.mother.sisters,
+                          self.root_family.father.sisters))
 
     @property
     def uncle(self):
         """Property return list of uncles
         Uncle is brother of mother or father
         """
-        return list(chain(self.root_family.mother.brothers, self.root_family.father.brothers))
+        return list(chain(self.root_family.mother.brothers,
+                          self.root_family.father.brothers))
 
     @property
     def brothers(self):
@@ -160,7 +165,7 @@ class PersonMixin(object):
         if isinstance(self, Woman):
             raise Exception('Woman don"t have a wife!')
         if not self.family.divorced:
-            return self.spouse.first_name
+            return self.spouse
 
     @property
     def children(self):
@@ -168,12 +173,6 @@ class PersonMixin(object):
         for f in self.list_family:
             children += f.children
         return list(chain(children))
-
-        '''for f in self.list_family:
-            # return list(chain([child for child in f.children]))
-            for child in f.children:
-                children.append(child)
-        return children'''
 
     @property
     def children_in_family(self):
@@ -208,11 +207,15 @@ class PersonMixin(object):
             person (Person): spouse for self
 
         Raises:
+            Exception: marriage is not possible between underage persons
             AttributeError: The couple was be able engaged
 
         """
+        if self.age < 18 or person.age < 18:
+            raise Exception('Too early')
         if not (self.propose or person.propose):
             raise AttributeError('They are not engaged!')
+
         person.spouse = self
         self.spouse = person
 
@@ -229,6 +232,7 @@ class PersonMixin(object):
 
         person.list_family.append(person.family)
         self.list_family.append(self.family)
+
 
 
 class Family:
@@ -248,51 +252,34 @@ class Family:
     Attributes:
         mother (obj) : mother in family
         father (obj) : father in family
-        children (list) : contain children
+        children (list) : contain all children in family
+        divorced (bool): status of divorce.
     """
-
-    # Father = namedtuple('Male', 'first_name, last_name')
-    # Mother = namedtuple('Female', 'first_name, last_name')
-
     def __init__(self, father=None, mother=None):
         self.mother = mother or Woman('Eve', 'Goddess', 0,
                                       Family(father='Godness', mother='Godness'))
         self.father = father or Man('Adam', 'Goddess', 0,
                                     Family(father='Godness', mother='Godness'))
         self.children = []
-        self._divorced = False
+        self.divorced = False
 
     def __iadd__(self, child):
         """This method add child in Family"""
+        child.root_family = self
         self.children.append(child)
 
     add = __iadd__
 
-    def add_child(self, person):
-        """This method add an already existing person in the Family"""
-        person.root_family = self
-        self.children.append(person)
-        if not person.spouse:
-            person.family = self
-
-    '''@property    
-    def divorce(self):
-        return self._divorced'''
-
-    # @divorce.setter
     def divorce(self):
         """This method release a divorce.
         After divorce father and mother can marriage again.
         Status of divorce of family change on True.
+        Status of propose of mother and father change on False.
 
         """
-        # if isinstance(value, bool):
-        # raise Exception('Its not exist')
         self.father.propose = False
         self.mother.propose = False
-        # self.mother.spouse = None
-        # self.father.spouse = None
-        self._divorced = True
+        self.divorced = True
 
 
 class Woman(Person, Family, PersonMixin):
@@ -350,7 +337,7 @@ class Man(Person, Family, PersonMixin):
              'Christopher']
 
     def __init__(self, *args, **kwargs):
-        super(Man,self).__init__(*args, **kwargs)
+        super(Man, self).__init__(*args, **kwargs)
         self.spouse = None
         self.propose = False
 
@@ -360,13 +347,14 @@ class Man(Person, Family, PersonMixin):
         Only Man can propose.
         Probability of consent is randomly.
 
-        Args:
-        woman (Woman): Narrowed, she's only woman
+            Args:
+                woman (Woman): Narrowed, she's only woman
 
-        Raises:
-            AttributeError: betrothal is possible only between a man and a woman
+            Raises:
+                AttributeError: betrothal is possible only between a man and a woman
 
         """
+
         if isinstance(woman, Man):
             raise AttributeError('You dont"t married on man!')
 
@@ -382,67 +370,69 @@ class Man(Person, Family, PersonMixin):
         else:
             print('She say No(')
 
+    def sex(self, woman):
+        """New member of family (child).
+        Child added in family of woman in children list.
+        Gender and name randomly generated.
+        Year of born automatically assigned for the current year.
+        Only Man can initiate sex.
 
-def sex(man, woman):
-    """New member of family (child).
-    Child added in family of woman in children list.
-    Gender and name randomly generated.
+        Args:
+            self (Man): instance of Man
+            woman (Woman): instance of Woman
 
+        Raises:
+            Exception: sex is not possible between underage persons
+            AttributeError: sex is possible only between a man and a woman
+            AttributeError: sex is possible only with the spouses
+        """
+        if self.age < 18 or woman.age < 18:
+            raise Exception('Too early for sex!')
 
-    Args:
-        man (Man): instance of Man
-        woman (Woman): instance of Woman
+        if not isinstance(self, Man) or not isinstance(woman, Woman):
+            raise AttributeError('No sex between man or between woman')
 
-    Raises:
-        AttributeError: sex is possible only between a man and a woman
-        AttributeError: sex is possible only with the spouses
-    """
-    if not isinstance(man, Man) or not isinstance(woman, Woman):
-        raise AttributeError('It not possible')
+        if not (self.spouse == woman and woman.spouse == self):
+            raise AttributeError('It not a spouse')
 
-    if not (man.spouse == woman and woman.spouse == man):
-        AttributeError('It not a spouse')
+        if True:  # man.fertility or woman.fertility:
+            print('Congratulations! You have a baby!')
+            gender = random.choice([Man, Woman])
+            name = random.choice(gender.NAMES)
+            baby = gender(name, self.last_name, datetime.date.today().year)
+            woman.family.add(baby)
+        else:
+            raise Exception('Small fertility')
 
-    if True:  # man.fertility or woman.fertility:
-        print('baby!')
-        gender = random.choice([Man, Woman])
-        name = random.choice(gender.NAMES)
-        baby = gender(name, man.last_name, 2017)
-        baby.root_family = woman.family
-        # baby.family = woman.family
-        # woman.family.children.append(baby)
-        woman.family.add(baby)
-    else:
-        raise Exception('Small fertility')
 
 Valya = Woman('Valentina', 'Brown', 1938)
 Leon = Man('leon', 'Val', 1955)
-Gornostay = Family(Leon, Valya)
-Leon.family= Gornostay
-Valya.family = Gornostay
-Valya.list_family.append(Valya.family)
+Leon.proposed(Valya)
+Leon.marriage(Valya)
+Gornostay = Valya.family
+# Valya.list_family.append(Valya.family)
 
 Andrey = Man('Andrey', 'Malysh', 1968)
 Marina = Woman('Marina', 'Malysh', 1968)
-Malyshevy = Family(Andrey, Marina)
+Andrey.proposed(Marina)
+Andrey.marriage(Marina)
+Malyshevy = Marina.family
 
-Andrey.family = Malyshevy
 Marina.root_family = Gornostay
 Gornostay.children.append(Marina)
-Marina.family = Malyshevy
-Marina.list_family.append(Marina.family)
+# Marina.list_family.append(Marina.family)
 
 Tamara = Woman('Toma', 'Malysheva', 1995)
 Tamara.family = Malyshevy
 Tamara.root_family = Malyshevy
-Malyshevy.children.append(Tamara)
+Malyshevy.add_child(Tamara)
 Denis = Man('Denis', 'Tverd', 1992)
 Denis.proposed(Tamara)
 Denis.marriage(Tamara)
-sex(Denis, Tamara)
-sex(Denis, Tamara)
-sex(Denis, Tamara)
-sex(Denis, Tamara)
+Denis.sex(Tamara)
+Denis.sex(Tamara)
+Denis.sex(Tamara)
+Denis.sex(Tamara)
 Sam = Woman('Sam', 'Snoy', 1955)
 Drogo = Man('Drogo', 'Khal', 1992)
 Leon.family.add_child(Sam)
@@ -450,12 +440,12 @@ Leon.family.add_child(Drogo)
 Asha = Woman('Asha', 'n', 1995)
 Drogo.proposed(Asha)
 Drogo.marriage(Asha)
-sex(Drogo, Asha)
+Drogo.sex(Asha)
 Tamara.family.divorce()
 Andrey = Man('Andrey', 'Mensh', 1990)
 Andrey.proposed(Tamara)
 Andrey.marriage(Tamara)
-sex(Andrey, Tamara)
+Andrey.sex(Tamara)
 
 
 # Tamara.mother.mother.first_name
