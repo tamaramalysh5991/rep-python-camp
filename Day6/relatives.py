@@ -26,7 +26,7 @@ def _relatives(self, level=0):
         if level == 0:
             yield self.root_family
 
-        if self.parents is not linage:
+        if self.root_family is not linage:
             yield linage
 
         if linage.father is not None:

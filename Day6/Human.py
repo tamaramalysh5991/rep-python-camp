@@ -2,8 +2,39 @@ import abc
 import datetime
 import random
 import names
-from itertools import chain
+from itertools import chain, filterfalse
+from functools import reduce
+# from human_exceptions import SmallFertility, SexBetweenNotSpouse, NotAdulthood, HomosexualLove
+import itertools
+import collections
+from functools import wraps
 
+class SmallFertility(Exception):
+
+    """ Exception raised when Male and Female not enough fertility
+        for child birth
+    """
+    pass
+
+
+class SexBetweenNotSpouse(Exception):
+
+    """ Exception raised when Male and Female try sex if them not are spouses
+    """
+    pass
+
+
+class HomosexualLove(Exception):
+
+    """ Exception raised when Man try sex with Man or Woman try sex with Woman
+    """
+    pass
+
+class NotAdulthood(Exception):
+
+    """ Exception raised when Male try sex with infant.
+    """
+    pass
 
 class Person(abc.ABC):
     """Base class of Family tree
@@ -19,7 +50,9 @@ class Person(abc.ABC):
         spouse (obj of Man or Woman): spouse of Person
         family (Family) : family of Person, after marriage changes
         root_family (Family): family from where the Person came
+
     """
+    ADULTHOOD = 18
 
     def __init__(self, first_name, last_name, birth, family=None):
 
@@ -47,22 +80,25 @@ class PersonMixin(object):
     """
     @property
     def age(self):
+        """This property return age of person"""
         age = datetime.date(self.birth, 1, 1)
         return datetime.date.today().year - age.year
 
     @property
     def great_grandchildren(self):
         """This property return great_grandchildren """
-        great_child = list(chain([child.children for child in self.grandchildren]))
-        return list(chain.from_iterable(great_child))
+        # great_child = list(chain([child.children for child in self.grandchildren]))
+        # return list(chain.from_iterable(great_child))
+        return PersonMixin.flatten(self.down(-2))
 
     @property
     def grandchildren(self):
-        """Return grandchildren of Person
+        """Return grandchildren of Persona
         Grandchildren are children of children of Person
         """
         # grandchild = [child.children for child in self.children]
-        return list(chain.from_iterable([child.children for child in self.children]))
+        # return list(chain.from_iterable([child.children for child in self.children]))
+        return PersonMixin.flatten(self.down(-1))
 
     @property
     def cousin(self):
@@ -77,7 +113,8 @@ class PersonMixin(object):
     @property
     def grandparents(self):
         """This property return list of grandparents"""
-        return list(chain(self.grandmother, self.grandfather))
+        # return list(chain(self.grandmother, self.grandfather))
+        return PersonMixin.flatten(self.ancestors(1))
 
     @property
     def parents(self):
@@ -89,8 +126,10 @@ class PersonMixin(object):
         """Property return great grandmothers
         Grandmother is mother of grandmother
         """
-        great_grandmother = [grand.mother for grand in self.grandparents]
-        return list(chain(great_grandmother))
+        # great_grandmother = [grand.mother for grand in self.grandparents]
+        # return list(chain(great_grandmother))
+        return list(filterfalse(lambda x: x is None,
+                                [family.mother for family in PersonMixin.flatten(self.ancestors(2))]))
 
     @property
     def aunt(self):
@@ -125,8 +164,8 @@ class PersonMixin(object):
     @property
     def grandmother(self):
         """This property returns list of grandmother for Person"""
-        return list(chain([self.mother.mother,
-                self.father.mother]))
+        #return list(chain([self.mother.mother, self.father.mother]))
+        return list(chain([family.mother for family in self.ancestors(1)]))
 
     @property
     def grandfather(self):
@@ -137,12 +176,12 @@ class PersonMixin(object):
     @property
     def mother(self):
         """This property returns mother for Person"""
-        return self.root_family.mother
+        return self.ancestors().mother
 
     @property
     def father(self):
         """This property returns father for Person"""
-        return self.root_family.father
+        return self.ancestors().father
 
     @property
     def husband(self):
@@ -169,6 +208,7 @@ class PersonMixin(object):
 
     @property
     def children(self):
+        """This property return all children of person"""
         children = []
         for f in self.list_family:
             children += f.children
@@ -193,6 +233,18 @@ class PersonMixin(object):
                 for female in self.children
                 if isinstance(female, Woman)]
 
+    @property
+    def family_all(self):
+        """This property return all members of root family"""
+        return list(chain([self.family.mother, self.family.father], self.family.children))
+
+    @property
+    def root_family_all(self):
+        """This property return all members of root family"""
+        return list(chain([self.root_family.mother, self.root_family.father], self.root_family.children))
+
+
+
     def marriage(self, person):
         """Marriage and create new Family.
         Marriage is possible when propose
@@ -211,10 +263,10 @@ class PersonMixin(object):
             AttributeError: The couple was be able engaged
 
         """
-        if self.age < 18 or person.age < 18:
-            raise Exception('Too early')
+        if self.age < Person.ADULTHOOD or person.age < Person.ADULTHOOD:
+            raise NotAdulthood ('Too early')
         if not (self.propose or person.propose):
-            raise AttributeError('They are not engaged!')
+            raise SexBetweenNotSpouse('They are not engaged!')
 
         person.spouse = self
         self.spouse = person
@@ -233,6 +285,70 @@ class PersonMixin(object):
         person.list_family.append(person.family)
         self.list_family.append(self.family)
 
+    @property
+    def root_family_parents(self):
+        return [self.root_family.mother, self.root_family.father]
+
+
+    def ancestors(self, level=0):
+        """This function return linage of family
+        Args:
+            level (int): lineage level for how much steps need return
+        """
+        memo = {0: self.root_family}
+        if level == 0:
+            return memo[0]
+        if self.root_family_all is None:
+            return None
+        if level not in memo:
+            memo[level] = list(chain(PersonMixin.ancestors(person, level - 1) for person in self.root_family_parents))
+            # lst = list(PersonMixin.rec(person, level - 1) for person in self.root_family_parents)
+            return memo[level]
+
+    def ancestors1(self, level=0):
+        """This function return linage of family
+            Args:
+                level (int): lineage level for how much steps need return
+        """
+        if level == 0:
+            return self.root_family
+        if self.root_family_all is None:
+            return None
+        lst = []
+        for person in self.root_family_parents:
+            lst.append(PersonMixin.ancestors1(person, level - 1))
+        return lst
+
+
+    def down(self, level=0):
+        """This method return descendant of person
+        Args:
+            level (int): lineage level for how much steps need return"""
+        if level == 0:
+            return self.children
+        else:
+            return list(chain(PersonMixin.down(child, level + 1) for child in self.children))
+
+    def descendant(self, level=0):
+        """This method return descendant of person
+        Args:
+            level (int): lineage level for how much steps need return"""
+        if level == 0:
+            return self.children
+        for child in self.children:
+            yield from PersonMixin.down(child, level - 1)
+        return PersonMixin.down(self)
+
+    @staticmethod
+    def flatten(x):
+        """This method flatten a list
+        Args:
+            x (list) nested list
+        """
+        if isinstance(x, collections.Iterable):
+            return [a for i in x for a in PersonMixin.flatten(i)]
+        else:
+            return [x]
 
 
 class Family:
@@ -256,10 +372,8 @@ class Family:
         divorced (bool): status of divorce.
     """
     def __init__(self, father=None, mother=None):
-        self.mother = mother or Woman('Eve', 'Goddess', 0,
-                                      Family(father='Godness', mother='Godness'))
-        self.father = father or Man('Adam', 'Goddess', 0,
-                                    Family(father='Godness', mother='Godness'))
+        self.mother = mother # or Woman('Eve', 'Goddess', 0,Family(father='Godness', mother='Godness'))
+        self.father = father # or Man('Adam', 'Goddess', 0, Family(father='Godness', mother='Godness'))
         self.children = []
         self.divorced = False
 
@@ -356,7 +470,7 @@ class Man(Person, Family, PersonMixin):
         """
 
         if isinstance(woman, Man):
-            raise AttributeError('You dont"t married on man!')
+            raise HomosexualLove('You dont"t married on man!')
 
         # if self.family.divorced or woman.family.divorced:
             # raise Exception('')
@@ -368,6 +482,8 @@ class Man(Person, Family, PersonMixin):
             self.propose = True
 
         else:
+            woman.propose = False
+            self.propose = False
             print('She say No(')
 
     def sex(self, woman):
@@ -386,14 +502,14 @@ class Man(Person, Family, PersonMixin):
             AttributeError: sex is possible only between a man and a woman
             AttributeError: sex is possible only with the spouses
         """
-        if self.age < 18 or woman.age < 18:
-            raise Exception('Too early for sex!')
+        if self.age < Person.ADULTHOOD or woman.age < Person.ADULTHOOD:
+            raise NotAdulthood('Too early for sex!')
 
         if not isinstance(self, Man) or not isinstance(woman, Woman):
-            raise AttributeError('No sex between man or between woman')
+            raise HomosexualLove('No sex between man or between woman')
 
         if not (self.spouse == woman and woman.spouse == self):
-            raise AttributeError('It not a spouse')
+            raise SexBetweenNotSpouse('It not a spouse')
 
         if True:  # man.fertility or woman.fertility:
             print('Congratulations! You have a baby!')
@@ -402,9 +518,13 @@ class Man(Person, Family, PersonMixin):
             baby = gender(name, self.last_name, datetime.date.today().year)
             woman.family.add(baby)
         else:
-            raise Exception('Small fertility')
+            raise SmallFertility('Small fertility')
 
 
+Oksana = Woman('Oks', 'Tverd', 1970)
+Oleg = Man('Oleg', 'Tverd', 1970)
+Oleg.proposed(Oksana)
+Oleg.marriage(Oksana)
 Valya = Woman('Valentina', 'Brown', 1938)
 Leon = Man('leon', 'Val', 1955)
 Leon.proposed(Valya)
@@ -425,8 +545,9 @@ Gornostay.children.append(Marina)
 Tamara = Woman('Toma', 'Malysheva', 1995)
 Tamara.family = Malyshevy
 Tamara.root_family = Malyshevy
-Malyshevy.add_child(Tamara)
+Malyshevy.add(Tamara)
 Denis = Man('Denis', 'Tverd', 1992)
+Oksana.family.add(Denis)
 Denis.proposed(Tamara)
 Denis.marriage(Tamara)
 Denis.sex(Tamara)
@@ -435,8 +556,8 @@ Denis.sex(Tamara)
 Denis.sex(Tamara)
 Sam = Woman('Sam', 'Snoy', 1955)
 Drogo = Man('Drogo', 'Khal', 1992)
-Leon.family.add_child(Sam)
-Leon.family.add_child(Drogo)
+Leon.family.add(Sam)
+Leon.family.add(Drogo)
 Asha = Woman('Asha', 'n', 1995)
 Drogo.proposed(Asha)
 Drogo.marriage(Asha)
@@ -446,6 +567,8 @@ Andrey = Man('Andrey', 'Mensh', 1990)
 Andrey.proposed(Tamara)
 Andrey.marriage(Tamara)
 Andrey.sex(Tamara)
+
+Sam = Tamara.children[0]
 
 
 # Tamara.mother.mother.first_name
