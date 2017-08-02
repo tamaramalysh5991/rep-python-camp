@@ -77,6 +77,50 @@ class Person(abc.ABC):
         self.list_family = []
 
 
+class Family:
+    """Class of Family tree
+    This class is a model of family
+    Each family is a separate cell
+    Family can break up (divorce)
+    The family consists of mother, father and children
+    Parents of Mom and Dad relate to another family (one level higher)
+    Grandparents are two levels higher, and so on.
+
+    Args:
+        Father, Mother (namedtuple): For the first people (the problem of chicken and eggs),
+    seven families are created with the parents of Adam and Eve,
+    who are namedtuple
+
+    Attributes:
+        mother (obj) : mother in family
+        father (obj) : father in family
+        children (list) : contain all children in family
+        divorced (bool): status of divorce.
+    """
+    def __init__(self, father=None, mother=None):
+        self.mother = mother # or Woman('Eve', 'Goddess', 0,Family(father='Godness', mother='Godness'))
+        self.father = father # or Man('Adam', 'Goddess', 0, Family(father='Godness', mother='Godness'))
+        self.children = []
+        self.divorced = False
+
+    def __iadd__(self, child):
+        """This method add child in Family"""
+        child.root_family = self
+        self.children.append(child)
+
+    add = __iadd__
+
+    def divorce(self):
+        """This method release a divorce.
+        After divorce father and mother can marriage again.
+        Status of divorce of family change on True.
+        Status of propose of mother and father change on False.
+
+        """
+        self.father.propose = False
+        self.mother.propose = False
+        self.divorced = True
+
 class PersonMixin(object):
     """Class PersonMixin
     All instances of Person can use this method
@@ -300,7 +344,6 @@ class PersonMixin(object):
     def root_family_parents(self):
         return [self.root_family.mother, self.root_family.father]
 
-
     def ancestors(self, level=0):
         """This function return linage of family
         Args:
@@ -309,30 +352,13 @@ class PersonMixin(object):
         memo = {0: self.root_family}
         if level == 0:
             return memo[0]
-        try:
-            if self.root_family_all is None:
-                return None
-        except:
-            raise Exception('end')
 
-        if level not in memo:
-            memo[level] = list(chain(PersonMixin.ancestors(person, level - 1) for person in self.root_family_parents))
-            # lst = list(PersonMixin.rec(person, level - 1) for person in self.root_family_parents)
-            return memo[level]
-
-    def ancestors1(self, level=0):
-        """This function return linage of family
-            Args:
-                level (int): lineage level for how much steps need return
-        """
-        if level == 0:
-            return self.root_family
         if self.root_family_all is None:
             return None
-        lst = []
-        for person in self.root_family_parents:
-            lst.append(PersonMixin.ancestors1(person, level - 1))
-        return lst
+        if level not in memo:
+            memo[level] = list(chain((PersonMixin.ancestors(person, level - 1) for person in self.root_family_parents)))
+            # lst = list(PersonMixin.rec(person, level - 1) for person in self.root_family_parents)
+            return memo[level]
 
 
     def down(self, level=0):
@@ -340,67 +366,69 @@ class PersonMixin(object):
         Args:
             level (int): lineage level for how much steps need return"""
         if level == 0:
-            return self.children
+            return self.family
         else:
-            return list(chain(PersonMixin.down(child, level + 1) for child in self.children))
+            return list((PersonMixin.down(child, level + 1) for child in self.children))
 
-    def descendant(self, level=0):
-        """This method return descendant of person
+    def relatives(self, level=0):
+
+            """ method _relatives return instance of Family with level up
+            Args:
+                 level(int): lineage level for how much steps need return
+                 Local Attributes:
+                _relatives.rec(function): is local recursion function for get
+                                            instances from parents and save it.
+                        rec.linage(instance): instance of Family to get item from
+                                                mother or father line.
+                        rec.level_father(int): variable for raise stop iteration
+                                                when level is done.
+                        rec.level_mother(int): variable for raise stop iteration
+                                                when level is done.
+                    Return:
+                         relatives(list) contained instance of Family
+            """
+
+            def rec(root_family):
+                if isinstance(root_family, Family):
+                    print('Hello')
+                    yield root_family
+                if hasattr(root_family.mother, 'root_family'):
+                    yield from itertools.chain(rec(root_family.father.root_family),
+                                               rec(root_family.mother.root_family))
+
+                    #        f = operator.attrgetter('father.first_name', 'mather')
+                    #        sss = [f(x) for x in rec(self.parents)]
+                    # print(sss)
+
+            return rec(self.root_family.mother), rec(self.root_family.father)
+
+    def descendants(self, level=0):
+        """ method _down_relatives return instance of Family with level down
         Args:
-            level (int): lineage level for how much steps need return"""
-        if level == 0:
-            return self.children
-        for child in self.children:
-            yield from PersonMixin.down(child, level - 1)
-        return PersonMixin.down(self)
-
-
-
-
-
-class Family:
-    """Class of Family tree
-    This class is a model of family
-    Each family is a separate cell
-    Family can break up (divorce)
-    The family consists of mother, father and children
-    Parents of Mom and Dad relate to another family (one level higher)
-    Grandparents are two levels higher, and so on.
-
-    Args:
-        Father, Mother (namedtuple): For the first people (the problem of chicken and eggs),
-    seven families are created with the parents of Adam and Eve,
-    who are namedtuple
-
-    Attributes:
-        mother (obj) : mother in family
-        father (obj) : father in family
-        children (list) : contain all children in family
-        divorced (bool): status of divorce.
-    """
-    def __init__(self, father=None, mother=None):
-        self.mother = mother # or Woman('Eve', 'Goddess', 0,Family(father='Godness', mother='Godness'))
-        self.father = father # or Man('Adam', 'Goddess', 0, Family(father='Godness', mother='Godness'))
-        self.children = []
-        self.divorced = False
-
-    def __iadd__(self, child):
-        """This method add child in Family"""
-        child.root_family = self
-        self.children.append(child)
-
-    add = __iadd__
-
-    def divorce(self):
-        """This method release a divorce.
-        After divorce father and mother can marriage again.
-        Status of divorce of family change on True.
-        Status of propose of mother and father change on False.
-
+             level(int): lineage level for how much steps need return
+             Local Attributes:
+            _relatives.rec(function): is local recursion function for get
+                                        instances from parents and save it.
+                    rec.linage(instance): instance of Family to get item from
+                                            mother or father line.
+                    rec.level_father(int): variable for raise stop iteration
+                                            when level is done.
+                    rec.level_mother(int): variable for raise stop iteration
+                                            when level is done.
+                Return:
+                     relatives(list) contained instance of Family
         """
-        self.father.propose = False
-        self.mother.propose = False
-        self.divorced = True
+
+        def rec(linage):
+            if linage != self:
+                yield from rec(linage.mother)
+            yield linage
+
+        print([x for x in rec(self)], 'DDDDDDDDDDDD')
+        return [x for x in rec(self)]
+
+
+
 
 
 class Woman(Person, Family, PersonMixin):
