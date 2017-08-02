@@ -1,4 +1,4 @@
-from Human import Person, PersonMixin, Woman, Man
+from human import Person, PersonMixin, Woman, Man
 
 Valya = Woman('Valentina', 'Brown', 1938)
 Leon = Man('leon', 'Val', 1955)

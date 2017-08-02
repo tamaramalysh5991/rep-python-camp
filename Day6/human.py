@@ -9,6 +9,17 @@ import itertools
 import collections
 from functools import wraps
 
+
+def flatten(x):
+    """This method flatten a list
+    Args:
+        x (list) nested list
+    """
+    if isinstance(x, collections.Iterable):
+        return [a for i in x for a in flatten(i)]
+    else:
+        return [x]
+
 class SmallFertility(Exception):
 
     """ Exception raised when Male and Female not enough fertility
@@ -89,7 +100,7 @@ class PersonMixin(object):
         """This property return great_grandchildren """
         # great_child = list(chain([child.children for child in self.grandchildren]))
         # return list(chain.from_iterable(great_child))
-        return PersonMixin.flatten(self.down(-2))
+        return flatten(self.down(-2))
 
     @property
     def grandchildren(self):
@@ -98,7 +109,7 @@ class PersonMixin(object):
         """
         # grandchild = [child.children for child in self.children]
         # return list(chain.from_iterable([child.children for child in self.children]))
-        return PersonMixin.flatten(self.down(-1))
+        return flatten(self.down(-1))
 
     @property
     def cousin(self):
@@ -114,7 +125,7 @@ class PersonMixin(object):
     def grandparents(self):
         """This property return list of grandparents"""
         # return list(chain(self.grandmother, self.grandfather))
-        return PersonMixin.flatten(self.ancestors(1))
+        return flatten(self.ancestors(1))
 
     @property
     def parents(self):
@@ -129,7 +140,7 @@ class PersonMixin(object):
         # great_grandmother = [grand.mother for grand in self.grandparents]
         # return list(chain(great_grandmother))
         return list(filterfalse(lambda x: x is None,
-                                [family.mother for family in PersonMixin.flatten(self.ancestors(2))]))
+                                [family.mother for family in flatten(self.ancestors(2))]))
 
     @property
     def aunt(self):
@@ -298,8 +309,12 @@ class PersonMixin(object):
         memo = {0: self.root_family}
         if level == 0:
             return memo[0]
-        if self.root_family_all is None:
-            return None
+        try:
+            if self.root_family_all is None:
+                return None
+        except:
+            raise Exception('end')
+
         if level not in memo:
             memo[level] = list(chain(PersonMixin.ancestors(person, level - 1) for person in self.root_family_parents))
             # lst = list(PersonMixin.rec(person, level - 1) for person in self.root_family_parents)
@@ -339,16 +354,8 @@ class PersonMixin(object):
             yield from PersonMixin.down(child, level - 1)
         return PersonMixin.down(self)
 
-    @staticmethod
-    def flatten(x):
-        """This method flatten a list
-        Args:
-            x (list) nested list
-        """
-        if isinstance(x, collections.Iterable):
-            return [a for i in x for a in PersonMixin.flatten(i)]
-        else:
-            return [x]
+
+
 
 
 class Family:
