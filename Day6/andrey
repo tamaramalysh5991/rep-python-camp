@@ -1,0 +1,584 @@
+Skip to content
+This repository
+Search
+Pull requests
+Issues
+Marketplace
+Gist
+ @tamaramalysh5991
+ Sign out
+ Watch 3
+  Star 0
+  Fork 0 aaxbut/PythonCamp
+ Code  Issues 0  Pull requests 1  Projects 0  Wiki Insights
+Branch: feature/begin Find file Copy pathPythonCamp/day7/tmp/human_class.py
+7a92bba  an hour ago
+ Andrey But work on family class method changed _relatives
+0 contributors
+RawBlameHistory
+574 lines (494 sloc)  19 KB
+import abc
+import collections
+import itertools
+import random
+import operator
+from tmp.family_excaptions import NotEnoughFertility, SexMustBeWithSpouse
+
+
+class Family(object):
+
+    """ Family class
+    Static Attributes:
+        Father(namedtuple): contains attributes for create first parent type
+                            of Male for instance Family
+                typename(Male): typename instance
+                first_name(str): first name parent in instance Male in Family
+                last_name(str): last name parent in instance Male in Family
+        Mother(namedtuple): contains attributes for create first parent type
+                            of Female for instance Family
+                typename(Female): typename instance
+                first_name(str): first name parent in instance Female in Family
+                last_name(str): last name parent in instance Female in Family
+                parents(str): parents attribute for relative search
+    """
+    def __init__(self, **kwargs):
+        """ Family tree simple structure.
+        Args:
+            father(instance): instance of class Male or None
+            mother(instance): instance of class Female or None
+            child(instance): instance of class Male or Female
+        Return:
+            None
+        """
+        self.father = kwargs.get('father', None)
+        self.mother = kwargs.get('mother', None)
+
+    def __iadd__(self, other):
+        self.child.append(other)
+        return self
+
+
+class Human(abc.ABC):
+    """ class use
+            Class construct Human base class
+        Args:
+            first_name(str): Human first name
+            last_name(str): Human last name
+            family(instance): Family instance or None
+            parents(instance): parents family instance or None
+    """
+    FEMALE_NAMES = ['Sarah',
+                    'Mary',
+                    'Nicole',
+                    'Mandy',
+                    'Michelle',
+                    'Barbara',
+                    'Sarah',
+                    'Jessica',
+                    'Whitney',
+                    'Sherry']
+
+    MALE_NAMES = ['William',
+                  'Joseph',
+                  'Jeffrey',
+                  'Jeffrey',
+                  'Joseph',
+                  'Eric',
+                  'Jonathan',
+                  'Justin',
+                  'Andrew',
+                  'Christopher']
+
+    def __init__(
+            self,
+            first_name,
+            last_name,
+            family=None,
+            parents=None,
+            spouse=None,
+            divorced=True):
+
+        self.first_name = first_name
+        self.last_name = last_name
+        self.family = family
+        self.parents = parents or Family()
+        self.heartbeat = True
+        self.spouse = spouse
+        self.fertility = random.randint(0, 100)
+        self.divorced = divorced
+
+    @abc.abstractmethod
+    def meets(self):
+        """ This method initialize in instances Male and Female"""
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def marriage(self):
+        """ This method initialize in instance Male for create new
+            instance Family
+        Return:
+             instance family
+        """
+        raise NotImplementedError()
+
+    @property
+    def mother(self):
+        """ property return origin mother"""
+        return self.parents.mother
+
+    @property
+    def grandmother(self):
+        """ property return origin grandmother"""
+        return self.parents.mother.parents.mother
+
+
+class HumanActionsMixin(object):
+    """ Class helper use in Male and Female instances, in this
+        class realiaze helper methods sex, divorce, propose,
+        and private method _relatives.
+        Method:
+            sex(partner): This method use instance Male and Female,
+                for try make child, if instances is spouse.
+            divorce(spouse): This method use instance Male and Female,
+                for make divorce.
+            _relatives(level):
+    """
+
+    def sex(self, partner):
+        """ Make children fabric method
+        Args:
+            partner(instance): Class instance Male or Female
+        Return:
+            instance Male or Female if spouses lucky.
+        Raises:
+            AttributeError: If class instance the same, raise Exception.
+        """
+        if isinstance(self, Male) and isinstance(partner, Male):
+            raise AttributeError('Attribute should be instance of Female')
+        if isinstance(self, Female) and isinstance(partner, Female):
+            raise AttributeError('Attribute should be instance of Male')
+        if not all([self.heartbeat, partner.heartbeat]):
+            raise AttributeError('Attribute should be have heartbeat is True')
+        if self is not partner.spouse:
+            raise SexMustBeWithSpouse(
+                'Attribute should be have instance spouse')
+        if (self.fertility + partner.fertility) < 0:  # change 75
+            raise NotEnoughFertility(
+                'Instances Female and Male not have enough fertility')
+
+        gender_choice = random.choice([Male, Female])
+
+        if isinstance(gender_choice, Male):
+            child_name = random.choice(Human.MALE_NAMES)
+        else:
+            child_name = random.choice(Human.FEMALE_NAMES)
+
+        child = gender_choice(
+            child_name,
+            self.last_name,
+            None,
+            self.family)
+
+        # TODO: mby more cool variant
+        if hasattr(self.family, 'child'):
+            self.family += child
+        else:
+            self.family.child = []
+            self.family += child
+        return child
+
+    def divorce(self, spouse):
+        """ Action method divorce, release spouse from family
+        Args:
+            spouse(instance) Is instance of Male or Female
+        Return:
+            None
+        """
+        if not all([self.heartbeat, spouse.heartbeat]):
+            raise AttributeError('Attribute should be have heartbeat is True')
+        self.divorced = spouse.divorced = True
+
+    def _relatives(self, level=0):
+
+        """ method _relatives return instance of Family with level up
+        Args:
+             level(int): lineage level for how much steps need return
+             Local Attributes:
+            _relatives.rec(function): is local recursion function for get
+                                        instances from parents and save it.
+                    rec.linage(instance): instance of Family to get item from
+                                            mother or father line.
+                    rec.level_father(int): variable for raise stop iteration
+                                            when level is done.
+                    rec.level_mother(int): variable for raise stop iteration
+                                            when level is done.
+                Return:
+                     relatives(list) contained instance of Family
+        """
+        def rec(parents):
+            if isinstance(parents, Family):
+                yield parents
+            if hasattr(parents.mother, 'parents'):
+                yield from itertools.chain(rec(parents.father.parents),
+                                           rec(parents.mother.parents))
+
+#        f = operator.attrgetter('father.first_name', 'mather')
+#        sss = [f(x) for x in rec(self.parents)]
+       # print(sss)
+        return rec(self.parents.mother), rec(self.parents.father)
+
+    def _down_relatives(self, level=0):
+        """ method _down_relatives return instance of Family with level down
+        Args:
+             level(int): lineage level for how much steps need return
+             Local Attributes:
+            _relatives.rec(function): is local recursion function for get
+                                        instances from parents and save it.
+                    rec.linage(instance): instance of Family to get item from
+                                            mother or father line.
+                    rec.level_father(int): variable for raise stop iteration
+                                            when level is done.
+                    rec.level_mother(int): variable for raise stop iteration
+                                            when level is done.
+                Return:
+                     relatives(list) contained instance of Family
+        """
+        def rec(linage):
+            if linage != self:
+                yield from rec(linage.mother)
+            yield linage
+
+        print([x for x in rec(self)], 'DDDDDDDDDDDD')
+        return []
+
+    @property
+    def brothers(self):
+
+        """ property return brother's
+        Return:
+            list: return sib male instance
+        """
+
+        return [m for m in self.parents.mother.children
+                if isinstance(m, Male)]
+
+    @property
+    def sisters(self):
+
+        """ property return brother's
+        Return:
+            list: return sib male instance
+        """
+        return [m for m in self.parents.mother.children
+                if isinstance(m, Female)]
+
+    @property
+    def daughters(self):
+        """property return all daughters
+        Return:
+           daughters(list): in filter object contained instance of class Male
+        """
+        return [f for f in self.children
+                if isinstance(f, Female)]
+
+    @property
+    def sons(self):
+        """property return all sons
+        Return:
+           sons(list): in filter object contained instance of class Male
+        """
+        return [m for m in self.children
+                if isinstance(m, Male)]
+
+    @property
+    def father(self):
+        """ property return Male object from instance parents
+        Return:
+            Male(object) Male instance from parents
+        """
+        return self.parents.father
+
+    @property
+    def mother(self):
+        """ property return Female object from instance parents
+        Return:
+            Female(object): Female instance from parents
+        """
+        return self.parents.mother
+
+    @property
+    def children(self):
+        return self.family.child
+
+    @property
+    def grandparents(self):
+        """ property return instance family first level linage
+        Return:
+            Family(list): returned object list with first level parents
+        """
+        return self._relatives(1)
+
+    @property
+    def grandmothers(self):
+        """ property return Female object from first level linage
+        Return:
+            (instance): Female object from instance parents
+            """
+        return [f.mother
+                for f in itertools.chain(self._relatives(1))]
+
+    @property
+    def grandfathers(self):
+        """ property return Male object from first level linage
+        Return:
+            (instance): Male object from instance parents
+            """
+        return [m.father
+                for m in self._relatives(1)]
+
+    @property
+    def great_grandparents(self):
+        """ property return Male object from first level linage
+        Local attributes:
+            from_grandmother(object): Family instance from second
+                                level _relatives
+            from_grandfather(object): Family instance from second
+                                level _relatives
+            _linage(deque): list comprehension from private method
+                            _relatives with level 2
+        Return:
+            (instance): Male object from instance parents
+            """
+        from_grandmother = from_grandfather = None
+        _linage = collections.deque(m for m in self._relatives(2))
+        for idx in range(2):
+            if _linage:
+                from_grandmother = _linage.pop()
+            if _linage:
+                from_grandfather = _linage.popleft()
+        return [from_grandmother, from_grandfather]
+
+    @property
+    def grandchildren(self):
+        _children = self._down_relatives(0)
+        return [] # [x for x in itertools.chain(*_children)]
+
+    @property
+    def great_grandfather(self):
+        """ property return Male object from first level linage
+        Local attributes:
+            from_grandmother(object): Family instance from second
+                                level _relatives
+            from_grandfather(object): Family instance from second
+                                level _relatives
+            _linage(deque): list comprehension from private method
+                            _relatives with level 2
+        Return:
+            (instance): Male object from instance parents
+            """
+        from_grandmother = from_grandfather = None
+        _linage = collections.deque(m for m in self._relatives(2))
+        for idx in range(2):
+            if _linage:
+                from_grandmother = _linage.pop()
+            if _linage:
+                from_grandfather = _linage.popleft()
+        return [from_grandfather.father, from_grandmother.father]
+
+    @property
+    def great_grandmother(self):
+        """ property return Male object from first level linage
+        Local attributes:
+            from_grandmother(object): Family instance from second
+                                level _relatives
+            from_grandfather(object): Family instance from second
+                                level _relatives
+            _linage(deque): list comprehension from private method
+                            _relatives with level 2
+        Return:
+            (instance): Male object from instance parents
+            """
+        from_grandmother = from_grandfather = None
+        _linage = collections.deque(m for m in self._relatives(2))
+        for idx in range(2):
+            if _linage:
+                from_grandmother = _linage.pop()
+            if _linage:
+                from_grandfather = _linage.popleft()
+        return [from_grandfather.father, from_grandmother.mother]
+
+
+class Male(HumanActionsMixin, Human):
+
+    """  Class for initialize Male instance,
+    Args:
+        first_name(str): First name person
+        last_name(str): Last name person
+        family(None or instance): None if family is stay out, or instance
+                                of class Family
+        parents(None or instance): None if family(origin family) is stay out, or instance
+                                of class Family
+        """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.age = kwargs.get('age', 18)
+
+    @property
+    def husband(self):
+        """ property return instance wife"""
+        if self.spouse is not None:
+            return self.spouse
+        return
+
+    # TODO:
+    def meets(self, partner):
+        """ before method marriage use this for up of propose"""
+        partner.meets_status += random.randint(1, 10)
+        return partner.meets_status
+
+    def marriage(self, fiance):
+        """ Action method marriage, create new family
+        Args:
+            fiance: human instance Male or Female
+        Return:
+            Family instance
+        Raises:
+            AttributeError if spouse class instance the same
+            AttributeError if spouse instance heartbeat is True
+        """
+        if isinstance(self, Male) and isinstance(fiance, Male):
+            raise AttributeError('Attribute should be instance of Female')
+        if not all([self.divorced, fiance.divorced]):
+            raise AttributeError('Attribute should be have divorced is True')
+        if not self.propose(fiance):
+            raise AttributeError('''Attribute should be have more 
+                                    meets_status in Female instance
+                                    use meets method to level up chance''')
+
+        if not all([self.heartbeat, fiance.heartbeat]):
+            raise AttributeError('Attribute should be have heartbeat is True')
+
+        marriage_grats = '{} & {} <Just married>'.format(
+            self.first_name,
+            fiance.first_name
+        )
+        print('#' * 15, marriage_grats, '#' * 15)
+        if hasattr(fiance.family, 'child'):
+            self.family = fiance.family
+            self.spouse, fiance.spouse = fiance, self
+            self.divorced = fiance.divorced = False
+            return self.family
+        else:
+            self.family = fiance.family = Family(father=self,
+                                                 mother=fiance)
+            self.spouse, fiance.spouse = fiance, self
+            self.divorced = fiance.divorced = False
+            return self.family
+
+    def propose(self, partner):
+        """ before method marriage use this for take compliance
+        Arg:
+            partner(instance): Instance of Female
+        Raise exception:
+            AttributeError: If status from Female instance lower 65
+                            for level up status need use method meets from
+                            instance Male
+        Return:
+            Boolean(True)
+        """
+        if isinstance(self, Male) and isinstance(partner, Male):
+            raise AttributeError('Attribute should be instance of Female')
+
+        if int(partner.meets_status) > 1:
+            return True
+        else:
+            return False
+
+
+class Female(HumanActionsMixin, Human):
+
+    """ Class female
+    Args:
+        first_name(str): First name person
+        last_name(str): Last name person
+        family(None or instance): None if family is stay out, or instance
+                                of class Family
+        """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.meets_status = 10
+
+    @property
+    def wife(self):
+        """ property return instance husband"""
+        if self.spouse is not None:
+            return self.spouse
+        return
+
+    def meets(self, partner):
+        """ before method marriage use this for up of propose"""
+        raise AttributeError('This method can be initiated from Male instance')
+
+    def marriage(self, fiance):
+        raise AttributeError('This method can be initiated from Male instance')
+
+
+
+L_0 = Family()
+Kola = Male('Kolya', 'Ivanov')
+Masha = Female('Masha', 'Titova')
+p = Kola.meets(Masha)
+p = Kola.meets(Masha)
+p = Kola.meets(Masha)
+L_1 = Kola.marriage(Masha)
+
+Masha._relatives()
+Kola1 = Male('Kolya1', 'Ivanov', None, L_1)
+Masha1 = Female('Masha1', 'Titova')
+L_1_1 = Kola1.marriage(Masha1)
+
+Sasha = Male('Sasha', 'Petrov')
+Natsha = Female('Natsha', 'Vasileva')
+L_2 = Sasha.marriage(Natsha)
+
+Sasha.sex(Natsha)
+Sasha.sex(Natsha)
+
+Sasha12 = Male('Sasha12', 'Petrov', None, L_1_1)
+Natsha12 = Female('Natsha12', 'Vasileva', None, L_1)
+L_41 = Sasha12.marriage(Natsha12)
+Sasha12.sex(Natsha12)
+
+Pasha = Male('Pasha', 'Petrov', None, L_41)
+Vera = Female('Vera', 'Vasileva', None, L_2)
+L_2.child.append(Vera)
+L_41.child.append(Pasha)
+L_3 = Pasha.marriage(Vera)
+#Pasha.sex(Vera)
+#Pasha.sex(Vera)
+#Pasha.sex(Vera)
+#Pasha.sex(Vera)
+#Pasha.sex(Vera)
+Jana = Female('Jana', 'Vasileva', None, L_3)
+#L_3.child.append(Jana)
+
+#print(Pasha.daughters)
+#dd = Natsha12._down_relatives()
+#print(dd, 'DSFDSFDSFSFSDFS')
+#print(Sasha.family.child, 'sdsdsdsdsds')
+#print(Jana.grandmothers, '$#$#$!!')
+#print(Jana.grandfathers, '$#$#$!!')
+#print(Jana.grandparents, '$#$#$!!')
+
+#print(Jana.great_grandparents, '####@@@')
+#print(dd, '####@@@ddd')
+parents = Jana._relatives()
+#parents1 = Jana._relatives(11)
+a, b = parents
+print([*itertools.islice(a, 1)][-1])
+#print([x for x in a if x is not None], 'ddsdsd')
+#print([x for x in b if x is not None], 'ddsdsd')
+#print([x for x in parents1 if x is not None], 'ddsdsd1')
+#print('#'*25)
+

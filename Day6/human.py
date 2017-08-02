@@ -372,35 +372,31 @@ class PersonMixin(object):
 
     def relatives(self, level=0):
 
-            """ method _relatives return instance of Family with level up
-            Args:
-                 level(int): lineage level for how much steps need return
-                 Local Attributes:
-                _relatives.rec(function): is local recursion function for get
+        """ method _relatives return instance of Family with level up
+        Args:
+            level(int): lineage level for how much steps need return
+            Local Attributes:
+            relatives.rec(function): is local recursion function for get
                                             instances from parents and save it.
-                        rec.linage(instance): instance of Family to get item from
+            rec.linage(instance): instance of Family to get item from
                                                 mother or father line.
-                        rec.level_father(int): variable for raise stop iteration
+            rec.level_father(int): variable for raise stop iteration
                                                 when level is done.
-                        rec.level_mother(int): variable for raise stop iteration
+            rec.level_mother(int): variable for raise stop iteration
                                                 when level is done.
-                    Return:
-                         relatives(list) contained instance of Family
+            Return:
+                relatives(list) contained instance of Family
             """
 
-            def rec(root_family):
-                if isinstance(root_family, Family):
-                    print('Hello')
-                    yield root_family
-                if hasattr(root_family.mother, 'root_family'):
-                    yield from itertools.chain(rec(root_family.father.root_family),
-                                               rec(root_family.mother.root_family))
+        def rec(root_family):
+            if isinstance(root_family, Family):
+                print('Hello')
+                yield root_family
+            if hasattr(root_family.mother, 'root_family'):
+                yield from itertools.chain(rec(root_family.father.root_family),
+                                            rec(root_family.mother.root_family))
 
-                    #        f = operator.attrgetter('father.first_name', 'mather')
-                    #        sss = [f(x) for x in rec(self.parents)]
-                    # print(sss)
-
-            return rec(self.root_family.mother), rec(self.root_family.father)
+        return rec(self.root_family.mother), rec(self.root_family.father)
 
     def descendants(self, level=0):
         """ method _down_relatives return instance of Family with level down
@@ -426,9 +422,6 @@ class PersonMixin(object):
 
         print([x for x in rec(self)], 'DDDDDDDDDDDD')
         return [x for x in rec(self)]
-
-
-
 
 
 class Woman(Person, Family, PersonMixin):
