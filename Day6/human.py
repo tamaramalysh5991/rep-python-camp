@@ -20,6 +20,7 @@ def flatten(x):
     else:
         return [x]
 
+
 class SmallFertility(Exception):
 
     """ Exception raised when Male and Female not enough fertility
@@ -41,11 +42,13 @@ class HomosexualLove(Exception):
     """
     pass
 
+
 class NotAdulthood(Exception):
 
     """ Exception raised when Male try sex with infant.
     """
     pass
+
 
 class Person(abc.ABC):
     """Base class of Family tree
@@ -120,6 +123,7 @@ class Family:
         self.father.propose = False
         self.mother.propose = False
         self.divorced = True
+
 
 class PersonMixin(object):
     """Class PersonMixin
@@ -404,7 +408,7 @@ class PersonMixin(object):
             return None
         return [mom[level - 1], dad[level - 1]]
 
-    def descendants1(self, level=0):
+    def descendants_1(self, level=0):
         """ method _down_relatives return instance of Family with level down
         Args:
              level(int): lineage level for how much steps need return
@@ -432,12 +436,12 @@ class PersonMixin(object):
                 rec._person = person
                 rec._level = 0
             else:
-                # if rec._person.family != person.root_family:
-                if rec._person != person.mother or rec._person != person.father:
+                if rec._person.family != person.root_family:
                     rec._level += 1
                     # rec._person = person
 
             for child in person.children:
+                if child is not None:
                     yield rec._level, child
                     yield from rec(child)
 
@@ -445,6 +449,28 @@ class PersonMixin(object):
 
     # list(Marina.descendants(1))
     # list(Valya.descendants(1))
+    def descendants_2(self, level=0):
+        """This method return descendant of person
+        Args:
+            level (int): lineage level for how much steps need return"""
+
+        def rec(family):
+            if not hasattr(rec, '_family'):
+                rec._family = family
+                rec._level = 0
+            else:
+                if rec._family != family:
+                    rec._level += 1
+                    # rec._person = person
+
+            for child in family.children:
+                yield rec._level, child
+                if child.family is not None:
+                    yield from rec(child.family)
+
+        result = (list(rec(fam)) for fam in self.list_family)
+        des = list(result)
+        return list(itertools.chain.from_iterable(des))
 
 
 class Woman(Person, PersonMixin):
