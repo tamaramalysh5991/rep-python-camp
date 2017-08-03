@@ -2,7 +2,7 @@ import abc
 import datetime
 import random
 import names
-from itertools import chain, filterfalse
+from itertools import chain, filterfalse, zip_longest
 from functools import reduce
 # from human_exceptions import SmallFertility, SexBetweenNotSpouse, NotAdulthood, HomosexualLove
 import itertools
@@ -183,8 +183,9 @@ class PersonMixin(object):
         """
         # great_grandmother = [grand.mother for grand in self.grandparents]
         # return list(chain(great_grandmother))
-        return list(filterfalse(lambda x: x is None,
-                                [family.mother for family in flatten(self.ancestors(2))]))
+        # return list(filterfalse(lambda x: x is None,[family.mother for family in flatten(self.ancestors(2))]))
+        a, b = self.relatives()
+        return list(a)[1].mother, list(b)[1].mother
 
     @property
     def aunt(self):
@@ -341,7 +342,8 @@ class PersonMixin(object):
         self.list_family.append(self.family)
 
     @property
-    def root_family_parents(self):
+    def parents(self):
+        """This property return parents of person"""
         return [self.root_family.mother, self.root_family.father]
 
     def ancestors(self, level=0):
@@ -366,7 +368,7 @@ class PersonMixin(object):
         Args:
             level (int): lineage level for how much steps need return"""
         if level == 0:
-            return self.family
+            return self.children
         else:
             return list((PersonMixin.down(child, level + 1) for child in self.children))
 
@@ -376,55 +378,76 @@ class PersonMixin(object):
         Args:
             level(int): lineage level for how much steps need return
             Local Attributes:
-            relatives.rec(function): is local recursion function for get
+                relatives.rec(function): is local recursion function for get
                                             instances from parents and save it.
-            rec.linage(instance): instance of Family to get item from
-                                                mother or father line.
-            rec.level_father(int): variable for raise stop iteration
-                                                when level is done.
-            rec.level_mother(int): variable for raise stop iteration
-                                                when level is done.
+                mom (list) contains innstanes of Family from mother linage
+                dad (list) ) contains innstanes of Family from mother linage
             Return:
                 relatives(list) contained instance of Family
             """
 
+        # [*itertools.islice(a, level)][-1]
         def rec(root_family):
-            if isinstance(root_family, Family):
-                print('Hello')
+            if root_family.mother is not None:
                 yield root_family
             if hasattr(root_family.mother, 'root_family'):
                 yield from itertools.chain(rec(root_family.father.root_family),
                                             rec(root_family.mother.root_family))
 
-        return rec(self.root_family.mother), rec(self.root_family.father)
+        #relatives = itertools.zip_longest(rec(self.root_family.mother), rec(self.root_family.mother))
 
-    def descendants(self, level=0):
+        if level == 0:
+            return self.parents
+
+        mom, dad = list(rec(self.mother.root_family)), list(rec(self.father.root_family))
+        if len(mom) < level or len(dad) < level:
+            return None
+        return [mom[level - 1], dad[level - 1]]
+
+    def descendants1(self, level=0):
         """ method _down_relatives return instance of Family with level down
         Args:
              level(int): lineage level for how much steps need return
              Local Attributes:
             _relatives.rec(function): is local recursion function for get
                                         instances from parents and save it.
-                    rec.linage(instance): instance of Family to get item from
-                                            mother or father line.
-                    rec.level_father(int): variable for raise stop iteration
-                                            when level is done.
-                    rec.level_mother(int): variable for raise stop iteration
-                                            when level is done.
                 Return:
                      relatives(list) contained instance of Family
         """
+        def rec(person):
 
-        def rec(linage):
-            if linage != self:
-                yield from rec(linage.mother)
-            yield linage
+            for child in person.children:
+                    yield child
+                    # if len(child.children) != 0:
+                    yield from rec(child)
 
-        print([x for x in rec(self)], 'DDDDDDDDDDDD')
-        return [x for x in rec(self)]
+        return rec(self)
+
+    def descendants(self, level=0):
+        """This method return descendant of person
+        Args:
+            level (int): lineage level for how much steps need return"""
+        def rec(person):
+            if not hasattr(rec, '_person'):
+                rec._person = person
+                rec._level = 0
+            else:
+                # if rec._person.family != person.root_family:
+                if rec._person != person.mother or rec._person != person.father:
+                    rec._level += 1
+                    # rec._person = person
+
+            for child in person.children:
+                    yield rec._level, child
+                    yield from rec(child)
+
+        return rec(self)
+
+    # list(Marina.descendants(1))
+    # list(Valya.descendants(1))
 
 
-class Woman(Person, Family, PersonMixin):
+class Woman(Person, PersonMixin):
     """Fabric of Person type of Woman
     Woman can choice her last_name.
 
@@ -456,7 +479,7 @@ class Woman(Person, Family, PersonMixin):
         self.propose = False
 
 
-class Man(Person, Family, PersonMixin):
+class Man(Person, PersonMixin):
     """Class Man (Person)
     Fabric of Person type of Man
     Man can do propose.
@@ -549,6 +572,10 @@ class Man(Person, Family, PersonMixin):
             raise SmallFertility('Small fertility')
 
 
+Tona = Woman('Tona', 'GGG', 1945)
+Sergey = Man('Sergey', 'Mal', 1945)
+Sergey.proposed(Tona)
+Sergey.marriage(Tona)
 Oksana = Woman('Oks', 'Tverd', 1970)
 Oleg = Man('Oleg', 'Tverd', 1970)
 Oleg.proposed(Oksana)
@@ -562,6 +589,9 @@ Gornostay = Valya.family
 
 Andrey = Man('Andrey', 'Malysh', 1968)
 Marina = Woman('Marina', 'Malysh', 1968)
+
+
+Tona.family.add(Oleg)
 Andrey.proposed(Marina)
 Andrey.marriage(Marina)
 Malyshevy = Marina.family
@@ -582,19 +612,19 @@ Denis.sex(Tamara)
 Denis.sex(Tamara)
 Denis.sex(Tamara)
 Denis.sex(Tamara)
-Sam = Woman('Sam', 'Snoy', 1955)
+# Sam = Woman('Sam', 'Snoy', 1955)
 Drogo = Man('Drogo', 'Khal', 1992)
-Leon.family.add(Sam)
+# Leon.family.add(Sam)
 Leon.family.add(Drogo)
-Asha = Woman('Asha', 'n', 1995)
-Drogo.proposed(Asha)
-Drogo.marriage(Asha)
-Drogo.sex(Asha)
+# Asha = Woman('Asha', 'n', 1995)
+# Drogo.proposed(Asha)
+# Drogo.marriage(Asha)
+# Drogo.sex(Asha)
 Tamara.family.divorce()
-Andrey = Man('Andrey', 'Mensh', 1990)
-Andrey.proposed(Tamara)
-Andrey.marriage(Tamara)
-Andrey.sex(Tamara)
+Shepard = Man('Andrey', 'Mensh', 1990)
+Shepard.proposed(Tamara)
+Shepard.marriage(Tamara)
+Shepard.sex(Tamara)
 
 Sam = Tamara.children[0]
 
