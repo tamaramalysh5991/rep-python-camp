@@ -40,3 +40,13 @@ def _relatives(self, level=0):
     return [x
             for x in rec(self.root_family)
             if x.father is not None]
+
+
+ if isinstance(person, Person):
+                tmp_childs = []
+                for child in person.children:
+                    for key, element in rec(child):
+                        if key == level:
+                            tmp_childs.append(element)
+                return tmp_childs
+            return [v for k, v in rec(person) if k == level]

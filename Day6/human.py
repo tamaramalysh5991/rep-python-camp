@@ -99,7 +99,9 @@ class Family:
         father (obj) : father in family
         children (list) : contain all children in family
         divorced (bool): status of divorce.
+
     """
+
     def __init__(self, father=None, mother=None):
         self.mother = mother # or Woman('Eve', 'Goddess', 0,Family(father='Godness', mother='Godness'))
         self.father = father # or Man('Adam', 'Goddess', 0, Family(father='Godness', mother='Godness'))
@@ -150,6 +152,102 @@ class PersonMixin(object):
     and method of divorce.
 
     """
+    def ancestors(self, level=0):
+        """This function return linage of family
+        Args:
+            level (int): lineage level for how much steps need return
+        """
+        memo = {0: self.root_family}
+        if level == 0:
+            return memo[0]
+
+        if self.root_family_all is None:
+            return None
+        if level not in memo:
+            memo[level] = list(chain((PersonMixin.ancestors(person, level - 1) for person in self.root_family_parents)))
+            # lst = list(PersonMixin.rec(person, level - 1) for person in self.root_family_parents)
+            return memo[level]
+
+    def down(self, level=0):
+        """This method return descendant of person
+        Args:
+            level (int): lineage level for how much steps need return"""
+        if level == 0:
+            return self.children
+        else:
+            return list((PersonMixin.down(child, level + 1) for child in self.children))
+
+    def relatives(self, level=0):
+
+        """ method _relatives return instance of Family with level up
+        Args:
+            level(int): lineage level for how much steps need return
+            Local Attributes:
+                relatives.rec(function): is local recursion function for get
+                                            instances from parents and save it.
+                mom (list) contains innstanes of Family from mother linage
+                dad (list) ) contains innstanes of Family from mother linage
+            Return:
+                relatives(list) contained instance of Family
+            """
+
+        # [*itertools.islice(a, level)][-1]
+        def rec(root_family):
+            if root_family.mother is not None:
+                yield root_family
+            if hasattr(root_family.mother, 'root_family'):
+                yield from itertools.chain(rec(root_family.father.root_family),
+                                            rec(root_family.mother.root_family))
+
+        #relatives = itertools.zip_longest(rec(self.root_family.mother), rec(self.root_family.mother))
+
+        if level == 0:
+            return self.parents
+
+        mom, dad = list(rec(self.mother.root_family)), list(rec(self.father.root_family))
+        if len(mom) < level or len(dad) < level:
+            return None
+        return [mom[level - 1], dad[level - 1]]
+
+    def all_descendants(self, level=0):
+        """ method _down_relatives return instance of Family with level down
+        Args:
+             level(int): lineage level for how much steps need return
+             Local Attributes:
+            _relatives.rec(function): is local recursion function for get
+                                        instances from parents and save it.
+                Return:
+                     relatives(list) contained instance of Family
+        """
+        def rec(person):
+
+            for child in person.children:
+                    yield child
+                    yield from rec(child)
+
+        return rec(self)
+
+    def descendants(self, level=0):
+        """This method return descendant of person
+        Args:
+            level (int): lineage level for how much steps need return"""
+        def rec(person):
+            if not hasattr(rec, '_person'):
+                rec._person = person
+                rec._level = 0
+            else:
+                if rec._person not in person.children:
+                    rec._level += 1
+
+            for child in person.children:
+                    yield rec._level, child
+            #for child in person.children:
+                    yield from rec(child)
+
+        #return rec(self)
+
+        return [v for k, v in rec(self) if k == level]
+
     @property
     def age(self):
         """This property return age of person"""
@@ -161,7 +259,7 @@ class PersonMixin(object):
         """This property return great_grandchildren """
         # great_child = list(chain([child.children for child in self.grandchildren]))
         # return list(chain.from_iterable(great_child))
-        return flatten(self.down(-2))
+        return self.descendants(2)
 
     @property
     def grandchildren(self):
@@ -170,7 +268,7 @@ class PersonMixin(object):
         """
         # grandchild = [child.children for child in self.children]
         # return list(chain.from_iterable([child.children for child in self.children]))
-        return flatten(self.down(-1))
+        return self.descendants(1)
 
     @property
     def cousin(self):
@@ -209,16 +307,16 @@ class PersonMixin(object):
         """Property return list of aunts
         Aunt is sister of father or mother
         """
-        return list(chain(self.root_family.mother.sisters,
-                          self.root_family.father.sisters))
+        return list(chain(self.mother.sisters,
+                          self.father.sisters))
 
     @property
     def uncle(self):
         """Property return list of uncles
         Uncle is brother of mother or father
         """
-        return list(chain(self.root_family.mother.brothers,
-                          self.root_family.father.brothers))
+        return list(chain(self.mother.brothers,
+                          self.father.brothers))
 
     @property
     def brothers(self):
@@ -286,11 +384,6 @@ class PersonMixin(object):
         for f in self.list_family:
             children += f.children
         return list(chain(children))
-
-    @property
-    def children_in_family(self):
-        """This method returns list of children for Person"""
-        return [child for child in self.family.children]
 
     @property
     def son(self):
@@ -364,127 +457,9 @@ class PersonMixin(object):
         return [self.root_family.mother, self.root_family.father]
 
 
-
-    def ancestors(self, level=0):
-        """This function return linage of family
-        Args:
-            level (int): lineage level for how much steps need return
-        """
-        memo = {0: self.root_family}
-        if level == 0:
-            return memo[0]
-
-        if self.root_family_all is None:
-            return None
-        if level not in memo:
-            memo[level] = list(chain((PersonMixin.ancestors(person, level - 1) for person in self.root_family_parents)))
-            # lst = list(PersonMixin.rec(person, level - 1) for person in self.root_family_parents)
-            return memo[level]
-
-
-    def down(self, level=0):
-        """This method return descendant of person
-        Args:
-            level (int): lineage level for how much steps need return"""
-        if level == 0:
-            return self.children
-        else:
-            return list((PersonMixin.down(child, level + 1) for child in self.children))
-
-    def relatives(self, level=0):
-
-        """ method _relatives return instance of Family with level up
-        Args:
-            level(int): lineage level for how much steps need return
-            Local Attributes:
-                relatives.rec(function): is local recursion function for get
-                                            instances from parents and save it.
-                mom (list) contains innstanes of Family from mother linage
-                dad (list) ) contains innstanes of Family from mother linage
-            Return:
-                relatives(list) contained instance of Family
-            """
-
-        # [*itertools.islice(a, level)][-1]
-        def rec(root_family):
-            if root_family.mother is not None:
-                yield root_family
-            if hasattr(root_family.mother, 'root_family'):
-                yield from itertools.chain(rec(root_family.father.root_family),
-                                            rec(root_family.mother.root_family))
-
-        #relatives = itertools.zip_longest(rec(self.root_family.mother), rec(self.root_family.mother))
-
-        if level == 0:
-            return self.parents
-
-        mom, dad = list(rec(self.mother.root_family)), list(rec(self.father.root_family))
-        if len(mom) < level or len(dad) < level:
-            return None
-        return [mom[level - 1], dad[level - 1]]
-
-    def descendants_1(self, level=0):
-        """ method _down_relatives return instance of Family with level down
-        Args:
-             level(int): lineage level for how much steps need return
-             Local Attributes:
-            _relatives.rec(function): is local recursion function for get
-                                        instances from parents and save it.
-                Return:
-                     relatives(list) contained instance of Family
-        """
-        def rec(person):
-
-            for child in person.children:
-                    yield child
-                    # if len(child.children) != 0:
-                    yield from rec(child)
-
-        return rec(self)
-
-    def descendants(self, level=0):
-        """This method return descendant of person
-        Args:
-            level (int): lineage level for how much steps need return"""
-        def rec(person):
-            if not hasattr(rec, '_person'):
-                rec._person = person
-                rec._level = 0
-            else:
-                if rec._person not in person.children:
-                    rec._level += 1
-
-            for child in person.children:
-                    yield rec._level, child
-            for child in person.children:
-                    yield from rec(child)
-
-        return rec(self)
-
     # list(Marina.descendants(1))
-    #list(Valya.descendants())
-    def descendants_2(self, level=0):
-        """This method return descendant of person
-        Args:
-            level (int): lineage level for how much steps need return"""
+    # list(Valya.descendants())
 
-        def rec(family):
-            if not hasattr(rec, '_family'):
-                rec._family = family
-                rec._level = 0
-            else:
-                if rec._family != family:
-                    rec._level += 1
-                    # rec._person = person
-
-            for child in family.famiychild:
-                yield rec._level, child
-                if child.family is not None:
-                    yield from rec(child.family)
-
-        result = (list(rec(fam)) for fam in self.list_family)
-        des = list(result)
-        return list(itertools.chain.from_iterable(des))
 
 
 class Woman(Person, PersonMixin):
