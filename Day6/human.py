@@ -124,6 +124,19 @@ class Family:
         self.mother.propose = False
         self.divorced = True
 
+    @property
+    def familychild(self):
+        """Property returns members family
+        Args:
+            children (list) List children of instance Family
+        Return:
+            (list): objects attribute of class Family"""
+        if self.children == []:
+            return None
+        else:
+            children = [child for child in self.children]
+        return children
+
 
 class PersonMixin(object):
     """Class PersonMixin
@@ -350,6 +363,8 @@ class PersonMixin(object):
         """This property return parents of person"""
         return [self.root_family.mother, self.root_family.father]
 
+
+
     def ancestors(self, level=0):
         """This function return linage of family
         Args:
@@ -436,19 +451,18 @@ class PersonMixin(object):
                 rec._person = person
                 rec._level = 0
             else:
-                if rec._person.family != person.root_family:
+                if rec._person not in person.children:
                     rec._level += 1
-                    # rec._person = person
 
             for child in person.children:
-                if child is not None:
                     yield rec._level, child
+            for child in person.children:
                     yield from rec(child)
 
         return rec(self)
 
     # list(Marina.descendants(1))
-    # list(Valya.descendants(1))
+    #list(Valya.descendants())
     def descendants_2(self, level=0):
         """This method return descendant of person
         Args:
@@ -463,7 +477,7 @@ class PersonMixin(object):
                     rec._level += 1
                     # rec._person = person
 
-            for child in family.children:
+            for child in family.famiychild:
                 yield rec._level, child
                 if child.family is not None:
                     yield from rec(child.family)
